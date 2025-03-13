@@ -1,0 +1,69 @@
+services:
+  postgis_db:
+    container_name: postgis_db
+    image: postgis/postgis:15-3.3
+    restart: always
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB_NAME}
+    ports:
+      - "${POSTGRES_PORT}:5432" 
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  data_processor:
+    container_name: bay_area_housing_processor
+    build:
+      context: ./processor
+      dockerfile: Dockerfile
+    restart: on-failure
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgis_db:5432/${POSTGRES_DB_NAME}
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - processor_data:/app/data
+    depends_on:
+      postgis_db:
+        condition: service_healthy
+    networks:
+      - app_network
+    command: ["python", "init_db.py"]
+
+  bay_area_housing_api:
+    container_name: bay_area_housing_api
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    restart: always
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgis_db:5432/${POSTGRES_DB_NAME}
+      - PORT=8000
+      - NODE_ENV=development
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgis_db:
+        condition: service_healthy
+      data_processor:
+        condition: service_completed_successfully
+    volumes:
+      - api_data:/app/data
+    networks:
+      - app_network
+
+volumes:
+  postgres_data:
+  api_data:
+  processor_data:
+
+networks:
+  app_network:
+    driver: bridge
