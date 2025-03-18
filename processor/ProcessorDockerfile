@@ -1,0 +1,38 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    postgresql-client \
+    wget \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create data directory
+RUN mkdir -p /app/data
+RUN mkdir -p /app/data_collectors
+
+# Copy requirements first to leverage Docker cache
+COPY processor/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy Python scripts
+COPY processor/*.py /app/
+COPY data_collectors/*.py /app/data_collectors/
+COPY data_collectors/database-schema.sql /app/data_collectors/
+
+# Ensure files have correct permissions
+RUN chmod -R 755 /app
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+
+# Entry point script
+COPY processor/init-system.sh /app/init-system.sh
+RUN chmod +x /app/init-system.sh
+
+ENTRYPOINT ["/app/init-system.sh"]
+CMD ["python", "/app/update_data.py"]

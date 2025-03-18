@@ -5,6 +5,7 @@ Collects crime statistics from open data portals for Bay Area counties and citie
 """
 
 import os
+from dotenv import load_dotenv
 import sys
 import time
 import logging
@@ -32,8 +33,18 @@ logging.basicConfig(
 )
 logger = logging.getLogger('crime_collector')
 
-# Optional database connection parameters
-db_url = os.environ.get('DATABASE_URL', '')
+# Load environment variables
+load_dotenv()
+
+# Construct DATABASE_URL from components
+db_user = os.environ.get('POSTGRES_USER')
+db_password = os.environ.get('POSTGRES_PASSWORD')
+db_name = os.environ.get('POSTGRES_DB_NAME')
+db_host = os.environ.get('POSTGIS_HOST', 'postgis_db')
+db_port = os.environ.get('POSTGRES_PORT', '5433')
+
+# Build the connection string
+db_url = f"postgres://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
 
 class CrimeDataCollector:
     """Collects crime data from open data portals for Bay Area counties and cities"""
@@ -83,52 +94,40 @@ class CrimeDataCollector:
         }
         
         # Mapping from source-specific crime types to standardized categories
-        self.crime_category_map = {
-            # Violent crimes
-            'homicide': 'violent',
-            'murder': 'violent',
-            'manslaughter': 'violent',
-            'robbery': 'violent',
-            'assault': 'violent',
-            'aggravated assault': 'violent',
-            'rape': 'violent',
-            'sexual assault': 'violent',
-            'sex offense': 'violent',
-            'kidnapping': 'violent',
-            'domestic violence': 'violent',
-            'shooting': 'violent',
-            'weapons': 'violent',
-            
-            # Property crimes
-            'burglary': 'property',
-            'theft': 'property',
-            'larceny': 'property',
-            'grand theft': 'property',
-            'petty theft': 'property',
-            'motor vehicle theft': 'property',
-            'stolen vehicle': 'property',
-            'auto theft': 'property',
-            'arson': 'property',
-            'vandalism': 'property',
-            'fraud': 'property',
-            'forgery': 'property',
-            'counterfeit': 'property',
-            'embezzlement': 'property',
-            
-            # Other crimes
-            'drug': 'drugs',
-            'narcotics': 'drugs',
-            'liquor laws': 'drugs',
-            'drunkenness': 'drugs',
-            'disturbing the peace': 'quality_of_life',
-            'disorderly conduct': 'quality_of_life',
-            'trespassing': 'quality_of_life',
-            'loitering': 'quality_of_life',
-            'prostitution': 'quality_of_life',
-            'traffic': 'traffic',
-            'driving under the influence': 'traffic',
-            'dui': 'traffic'
-        }
+        # In crime-data-collector.py, find self.crime_category_map in __init__ method
+		self.crime_category_map = {
+			# Part I Violent Crimes
+			'homicide': 'violent',
+			'murder': 'violent',
+			'manslaughter': 'violent',
+			'robbery': 'violent',
+			'assault': 'violent',
+			'aggravated assault': 'violent',
+			'rape': 'violent',
+			'sexual assault': 'violent',
+			
+			# Part I Property Crimes
+			'burglary': 'property',
+			'theft': 'property',
+			'larceny': 'property',
+			'motor vehicle theft': 'property',
+			'arson': 'property',
+			
+			# Part II Offenses
+			'drug': 'drugs',
+			'narcotics': 'drugs',
+			'disorderly conduct': 'quality_of_life',
+			'vandalism': 'property',
+			'fraud': 'property',
+			'dui': 'traffic',
+			'prostitution': 'quality_of_life',
+			'liquor laws': 'drugs',
+			'forgery': 'property',
+			'embezzlement': 'property',
+			
+			# Default for uncategorized
+			'other': 'other'
+		}
     
     def init_cache_db(self):
         """Initialize SQLite cache database"""
@@ -165,6 +164,34 @@ class CrimeDataCollector:
         
         conn.commit()
         conn.close()
+    
+    # In crime-data-collector.py, add this method to the CrimeDataCollector class
+	def download_jurisdiction_data(self):
+		"""Download jurisdiction data with zip codes"""
+		logger.info("Downloading jurisdiction to zip code mapping data")
+		
+		try:
+			# Use Census Bureau's ZCTA to Place Relationship File (free)
+			url = "https://www2.census.gov/geo/docs/maps-data/data/rel/zcta_place_rel_10.txt"
+			data_file = os.path.join(self.cache_dir, "zip_jurisdiction.csv")
+			
+			logger.info(f"Downloading jurisdiction mapping from: {url}")
+			response = requests.get(url)
+			
+			with open(data_file, 'wb') as f:
+				f.write(response.content)
+			
+			# Filter to just California places (state FIPS code 06)
+			df = pd.read_csv(data_file, sep=",")
+			ca_df = df[df['STATE'] == 6]
+			ca_df.to_csv(os.path.join(self.cache_dir, "ca_zip_jurisdiction.csv"), index=False)
+			
+			logger.info(f"Downloaded and filtered jurisdiction mapping")
+			return os.path.join(self.cache_dir, "ca_zip_jurisdiction.csv")
+				
+		except Exception as e:
+			logger.error(f"Error downloading jurisdiction data: {e}")
+			return None
     
     def get_cached_crime_data(self, jurisdiction, year, month):
         """Get crime data from cache if available and not expired"""

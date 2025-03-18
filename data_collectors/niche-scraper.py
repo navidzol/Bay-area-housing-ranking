@@ -5,6 +5,7 @@ This script responsibly collects data from Niche.com with appropriate rate limit
 """
 
 import os
+from dotenv import load_dotenv
 import sys
 import time
 import logging
@@ -31,8 +32,19 @@ logging.basicConfig(
 )
 logger = logging.getLogger('niche_scraper')
 
-# Optional database connection parameters
-db_url = os.environ.get('DATABASE_URL', '')
+# Load environment variables
+load_dotenv()
+
+# Construct DATABASE_URL from components
+db_user = os.environ.get('POSTGRES_USER')
+db_password = os.environ.get('POSTGRES_PASSWORD')
+db_name = os.environ.get('POSTGRES_DB_NAME')
+db_host = os.environ.get('POSTGIS_HOST', 'postgis_db')
+db_port = os.environ.get('POSTGRES_PORT', '5433')
+
+# Build the connection string
+db_url = f"postgres://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+
 
 class NicheDataScraper:
     """Comprehensive scraper for Niche.com zipcode data"""

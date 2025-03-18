@@ -1,0 +1,46 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Install required system tools
+RUN apk add --no-cache curl python3 postgresql-client
+
+# Copy package files and install dependencies
+COPY package*.json ./
+RUN npm install --production
+
+# Copy application code
+COPY . .
+
+# Create data directory
+RUN mkdir -p /app/data
+
+# Create health check script
+RUN cat <<EOF > /app/startup.sh
+#!/bin/sh
+set -e
+
+# Wait for database to be ready
+echo "Checking database connection..."
+until pg_isready -h \${POSTGIS_HOST:-postgis_db} -U "\${POSTGRES_USER:-bayarea_housing}" -d "\${POSTGRES_DB_NAME:-bayarea_housing_db}"; do
+  echo "Database not ready yet - sleeping 2s"
+  sleep 2
+done
+echo "Database is ready"
+
+# Start API server
+exec node server.js
+EOF
+
+
+RUN chmod +x /app/startup.sh
+
+# Set environment variables
+ENV NODE_ENV=${NODE_ENV:-production}
+ENV PORT=${API_PORT:-8000}
+
+# Expose port
+EXPOSE ${PORT}
+
+# Start API server
+CMD ["/app/startup.sh"]

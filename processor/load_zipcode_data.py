@@ -5,6 +5,7 @@ This script loads zipcode boundaries and real commute data from Census
 """
 
 import os
+from dotenv import load_dotenv
 import sys
 import logging
 import requests
@@ -26,7 +27,21 @@ logging.basicConfig(
 logger = logging.getLogger('load_zipcode_data')
 
 # Database connection parameters
-db_url = os.environ.get('DATABASE_URL')
+load_dotenv()
+
+# Construct DATABASE_URL from components
+db_user = os.environ.get('POSTGRES_USER')
+db_password = os.environ.get('POSTGRES_PASSWORD')
+db_name = os.environ.get('POSTGRES_DB_NAME')
+db_host = os.environ.get('POSTGIS_HOST', 'postgis_db')
+db_port = os.environ.get('POSTGRES_PORT', '5433')
+
+
+# Build the connection string
+db_url = f"postgres://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+
+census_zcta_url = os.environ.get('CENSUS_ZCTA_URL', 'https://www2.census.gov/geo/tiger/TIGER2020/ZCTA520/tl_2020_us_zcta520.zip')
+
 if not db_url:
     logger.error("DATABASE_URL environment variable not set")
     sys.exit(1)
@@ -45,7 +60,7 @@ def download_zcta_data():
     logger.info("Downloading ZCTA data from Census")
     
     # URL for 2020 ZCTA shapefile
-    url = "https://www2.census.gov/geo/tiger/TIGER2020/ZCTA520/tl_2020_us_zcta520.zip"
+    url = census_zcta_url
     
     try:
         response = requests.get(url)
@@ -194,13 +209,59 @@ def load_bay_area_zipcodes(shapefile_path):
             
         logger.info(f"Using ZCTA column: {zcta_col}")
         
-        # For this simplified example, we'll filter by the first 2 digits of the ZCTA
-        # Bay Area zipcodes generally start with 94, 95, or 93
-        bay_area_gdf = ca_gdf[
-            (ca_gdf[zcta_col].str[:2] == '94') | 
-            (ca_gdf[zcta_col].str[:2] == '95') |
-            (ca_gdf[zcta_col].str[:2] == '93')
-        ]
+        # Define Bay Area counties
+        bay_area_counties = ['San Francisco', 'Alameda', 'Contra Costa', 'Marin', 
+                          'Napa', 'San Mateo', 'Santa Clara', 'Solano', 'Sonoma']
+
+        # Attempt to filter by county if available in the data
+        county_col = None
+        for col in ['COUNTY', 'COUNTYFP', 'COUNTYFP20', 'county']:
+            if col in ca_gdf.columns:
+                county_col = col
+                break
+
+        if county_col:
+            # If we have county info, use that to filter
+            # Note: You would need a mapping from county FIPS to names
+            # This is a simplified version assuming county names are available
+            bay_area_gdf = ca_gdf[ca_gdf[county_col].isin(bay_area_counties)]
+            logger.info(f"Filtered to {len(bay_area_gdf)} ZIP codes in Bay Area counties")
+        else:
+            # Fallback to filtering by ZIP code prefix
+            # This is less accurate but better than nothing
+            bay_area_zips = []
+            
+            # San Francisco prefixes
+            bay_area_zips.extend([code for code in ca_gdf[zcta_col] if code.startswith('941')])
+            
+            # Alameda County (Oakland, Berkeley, etc.)
+            bay_area_zips.extend([code for code in ca_gdf[zcta_col] if code.startswith('945') or 
+                                 code.startswith('946') or code.startswith('947')])
+            
+            # Contra Costa County
+            bay_area_zips.extend([code for code in ca_gdf[zcta_col] if code.startswith('945') or code.startswith('944')])
+            
+            # San Mateo County
+            bay_area_zips.extend([code for code in ca_gdf[zcta_col] if code.startswith('940') or code.startswith('944')])
+            
+            # Santa Clara County
+            bay_area_zips.extend([code for code in ca_gdf[zcta_col] if code.startswith('95') and not code.startswith('959')])
+            
+            # Marin County
+            bay_area_zips.extend([code for code in ca_gdf[zcta_col] if code.startswith('949')])
+            
+            # Napa County
+            bay_area_zips.extend([code for code in ca_gdf[zcta_col] if code.startswith('945') and not code in bay_area_zips])
+            
+            # Sonoma County
+            bay_area_zips.extend([code for code in ca_gdf[zcta_col] if code.startswith('954') or code.startswith('955')])
+            
+            # Solano County
+            bay_area_zips.extend([code for code in ca_gdf[zcta_col] if code.startswith('945') and not code in bay_area_zips])
+            
+            # Filter to the Bay Area zip codes
+            bay_area_gdf = ca_gdf[ca_gdf[zcta_col].isin(bay_area_zips)]
+            logger.info(f"Filtered to {len(bay_area_gdf)} Bay Area ZIP codes by code pattern")
         
         logger.info(f"Filtered to {len(bay_area_gdf)} Bay Area ZCTAs")
         
@@ -209,8 +270,30 @@ def load_bay_area_zipcodes(shapefile_path):
             lambda x: MultiPolygon([x]) if x.geom_type == 'Polygon' else x
         )
         
-        # Add county placeholder - in production you'd do a proper spatial join
-        bay_area_gdf['county'] = 'Bay Area'
+        # Create a county lookup dictionary for Bay Area ZIP codes
+        county_lookup = {
+            '941': 'San Francisco',  # San Francisco
+            '940': 'San Mateo',      # San Mateo
+            '944': 'San Mateo',      # San Mateo/Contra Costa
+            '945': 'Contra Costa',   # Contra Costa/Alameda/Napa/Solano
+            '946': 'Alameda',        # Alameda
+            '947': 'Alameda',        # Alameda
+            '948': 'Alameda',        # Alameda
+            '949': 'Marin',          # Marin
+            '950': 'Santa Clara',    # Santa Clara
+            '951': 'Santa Clara',    # Santa Clara
+            '952': 'Santa Clara',    # Santa Clara
+            '953': 'Santa Clara',    # Santa Clara
+            '954': 'Sonoma',         # Sonoma
+            '955': 'Sonoma',         # Sonoma
+            '956': 'Napa',           # Napa
+            '957': 'Solano'          # Solano
+        }
+
+        # Assign counties based on ZIP code prefix
+        bay_area_gdf['county'] = bay_area_gdf[zcta_col].apply(
+            lambda z: county_lookup.get(z[:3], 'Bay Area')
+        )
         bay_area_gdf['state'] = 'CA'
         bay_area_gdf['name'] = bay_area_gdf[zcta_col] + ' Area'
         
@@ -241,6 +324,7 @@ def insert_zipcodes_into_db(gdf, commute_df, conn):
     
     try:
         # First, clear existing data
+        cursor.execute("TRUNCATE TABLE zipcode_ratings CASCADE")
         cursor.execute("TRUNCATE TABLE zipcodes CASCADE")
         
         # Insert each zipcode
@@ -257,26 +341,34 @@ def insert_zipcodes_into_db(gdf, commute_df, conn):
             if idx % 50 == 0:
                 logger.info(f"Inserted {idx} zipcodes")
         
-        # Insert commute time ratings if available
+        # Commit the zipcodes first
+        conn.commit()
+        
+        # Now insert commute time ratings if available
         if commute_df is not None:
             logger.info("Inserting real commute time data")
             for idx, row in commute_df.iterrows():
-                cursor.execute("""
-                INSERT INTO zipcode_ratings (zip, rating_type, rating_value, confidence, source, source_url)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                ON CONFLICT (zip, rating_type) DO UPDATE
-                SET rating_value = EXCLUDED.rating_value,
-                    confidence = EXCLUDED.confidence,
-                    source = EXCLUDED.source,
-                    source_url = EXCLUDED.source_url
-                """, (
-                    row['zip'], 
-                    'commuteTime', 
-                    row['commute_time'],
-                    0.9, 
-                    'US Census Bureau American Community Survey', 
-                    'https://www.census.gov/programs-surveys/acs'
-                ))
+                # Check if zipcode exists before inserting ratings
+                cursor.execute("SELECT 1 FROM zipcodes WHERE zip = %s", (row['zip'],))
+                if cursor.fetchone():  # Only insert if zipcode exists
+                    cursor.execute("""
+                    INSERT INTO zipcode_ratings (zip, rating_type, rating_value, confidence, source, source_url)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (zip, rating_type) DO UPDATE
+                    SET rating_value = EXCLUDED.rating_value,
+                        confidence = EXCLUDED.confidence,
+                        source = EXCLUDED.source,
+                        source_url = EXCLUDED.source_url
+                    """, (
+                        row['zip'], 
+                        'commuteTime', 
+                        row['commute_time'],
+                        0.9, 
+                        'US Census Bureau American Community Survey', 
+                        'https://www.census.gov/programs-surveys/acs'
+                    ))
+                else:
+                    logger.warning(f"Skipping commute rating for non-existent zipcode: {row['zip']}")
                 
                 # Log progress occasionally
                 if idx % 100 == 0:

@@ -1,10 +1,11 @@
-i#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Data update script for Bay Area Housing Criteria Map
 This script fetches and updates data from various sources
 """
 
 import os
+from dotenv import load_dotenv
 import sys
 import time
 import logging
@@ -27,11 +28,51 @@ logging.basicConfig(
 )
 logger = logging.getLogger('update_data')
 
-# Database connection parameters
-db_url = os.environ.get('DATABASE_URL')
+# Add data_collectors directory to Python path
+sys.path.append('/app/data_collectors')
+from data_collection_system import update_all_data
+
+# Load environment variables
+load_dotenv()
+
+# Construct DATABASE_URL from components
+db_user = os.environ.get('POSTGRES_USER')
+db_password = os.environ.get('POSTGRES_PASSWORD')
+db_name = os.environ.get('POSTGRES_DB_NAME')
+db_host = os.environ.get('POSTGIS_HOST', 'postgis_db')
+db_port = os.environ.get('POSTGRES_PORT', '5433')  # Note: Using 5433 for internal connection
+
+# Build the connection string
+db_url = f"postgres://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
 if not db_url:
     logger.error("DATABASE_URL environment variable not set")
     sys.exit(1)
+
+# Test database connection
+try:
+    logger.info(f"Testing database connection to {db_host}:{db_port}")
+    conn = psycopg2.connect(db_url)
+    cursor = conn.cursor()
+    cursor.execute("SELECT version();")
+    version = cursor.fetchone()
+    logger.info(f"Database connection successful: {version[0]}")
+    cursor.close()
+    conn.close()
+except Exception as e:
+    logger.error(f"Database connection error: {e}")
+    sys.exit(1)
+
+# Check if data_collection_system.py exists (without hyphen)
+data_collection_path = "/app/data_collectors/data_collection_system.py"
+if not os.path.exists(data_collection_path):
+    # Check for hyphenated version
+    hyphen_path = "/app/data_collectors/data_collection_system.py"
+    if os.path.exists(hyphen_path):
+        logger.warning(f"Found hyphenated filename '{hyphen_path}', consider renaming to '{data_collection_path}'")
+        data_collection_path = hyphen_path
+    else:
+        logger.error("Could not find data collection system module")
+        sys.exit(1)
 
 # Database helper functions
 def get_db_connection():
@@ -104,142 +145,20 @@ def update_rating(conn, zipcode, rating_type, rating_value, confidence, source, 
         logger.error(f"Error updating rating: {e}")
         conn.rollback()
 
-# Data fetchers
-class NicheDataFetcher:
-    """Class to fetch neighborhood data from Niche.com"""
-    
-    def __init__(self):
-        self.session = requests.Session()
-        self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        })
-    
-    def fetch_niche_data(self, zipcode):
-        """Fetch data for a zipcode from Niche.com"""
-        url = f"https://www.niche.com/places-to-live/z/{zipcode}/"
-        logger.info(f"Fetching Niche data for zipcode {zipcode}")
-        
-        try:
-            response = self.session.get(url, timeout=10)
-            if response.status_code != 200:
-                logger.warning(f"Failed to get data for zipcode {zipcode}: {response.status_code}")
-                return None
-            
-            soup = BeautifulSoup(response.text, 'html.parser')
-            
-            # Extract the overall grade
-            grade_element = soup.select_one("div.overall-grade span.niche__grade")
-            if not grade_element:
-                logger.warning(f"No grade found for zipcode {zipcode}")
-                return None
-            
-            grade = grade_element.text.strip()
-            
-            # Convert grade to numeric value (A+ = 10, A = 9.5, A- = 9, etc.)
-            grade_map = {
-                'A+': 10.0, 'A': 9.5, 'A-': 9.0,
-                'B+': 8.5, 'B': 8.0, 'B-': 7.5,
-                'C+': 7.0, 'C': 6.5, 'C-': 6.0,
-                'D+': 5.5, 'D': 5.0, 'D-': 4.5,
-                'F': 4.0
-            }
-            
-            niche_rating = grade_map.get(grade, 5.0)  # Default to 5.0 if not found
-            
-            # Add a small delay to avoid rate limiting
-            time.sleep(1)
-            
-            return {
-                'grade': grade,
-                'rating': niche_rating,
-                'url': url
-            }
-        
-        except Exception as e:
-            logger.error(f"Error fetching Niche data for zipcode {zipcode}: {e}")
-            return None
-    
-    def update_niche_ratings(self, conn, zipcodes=None):
-        """Update Niche ratings for all or specified zipcodes"""
-        try:
-            cursor = conn.cursor()
-            
-            # If no zipcodes provided, get all from database
-            if not zipcodes:
-                cursor.execute("SELECT zip FROM zipcodes")
-                zipcodes = [row[0] for row in cursor.fetchall()]
-            
-            logger.info(f"Updating Niche ratings for {len(zipcodes)} zipcodes")
-            
-            # Check if we need to update
-            if not check_data_source_needs_update(conn, "niche_ratings"):
-                logger.info("Niche ratings are up to date, skipping update")
-                return
-            
-            # Process zipcodes
-            for i, zipcode in enumerate(zipcodes):
-                logger.info(f"Processing zipcode {zipcode} ({i+1}/{len(zipcodes)})")
-                
-                niche_data = self.fetch_niche_data(zipcode)
-                
-                if niche_data:
-                    update_rating(
-                        conn,
-                        zipcode,
-                        'nicheRating',
-                        niche_data['rating'],
-                        0.8,  # Confidence
-                        'Niche.com',
-                        niche_data['url']
-                    )
-            
-            # Update data source record
-            update_data_source(
-                conn,
-                "niche_ratings",
-                30,  # Update every 30 days
-                "https://www.niche.com/",
-                "Niche.com neighborhood ratings"
-            )
-            
-            logger.info("Niche ratings update complete")
-        
-        except Exception as e:
-            logger.error(f"Error updating Niche ratings: {e}")
-            raise
-
 # Main update function
-def update_all_data():
-    """Update all data sources"""
-    conn = None
-    try:
-        conn = get_db_connection()
-        
-        # Update Niche ratings
-        niche_fetcher = NicheDataFetcher()
-        niche_fetcher.update_niche_ratings(conn)
-        
-        # Here you would add calls to other data fetchers:
-        # - School ratings fetcher
-        # - Crime rate fetcher
-        # - Commute time calculator
-        # - etc.
-        
-        logger.info("All data updates completed successfully")
-        
-    except Exception as e:
-        logger.error(f"Error during data update: {e}")
-        if conn:
-            conn.rollback()
-    finally:
-        if conn:
-            conn.close()
-
-if __name__ == "__main__":
+def run_update():
+    """Main function to run the update process"""
     try:
         logger.info("Starting data update process")
+        
         update_all_data()
-        logger.info("Data update process completed")
+        
+        logger.info("Data update process completed successfully")
     except Exception as e:
         logger.error(f"Data update process failed: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         sys.exit(1)
+
+if __name__ == "__main__":
+    run_update()

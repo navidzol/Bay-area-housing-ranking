@@ -10,3 +10,8 @@ geopandas==0.14.0
 pyproj==3.6.0
 fiona==1.9.4
 shapely==2.0.1
+python-dotenv==1.0.0
+ratelimit==2.2.1
+sodapy==2.2.0  # For the Socrata Open Data API
+beautifulsoup4==4.12.2
+requests==2.31.0

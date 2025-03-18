@@ -8,7 +8,7 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB_NAME}
     ports:
-      - "${POSTGRES_PORT}:5432" 
+      - "${POSTGRES_PORT:-5433}:5432" # Maps host port 5433 to container port 5432
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -22,48 +22,84 @@ services:
   data_processor:
     container_name: bay_area_housing_processor
     build:
-      context: ./processor
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: processor/ProcessorDockerfile
     restart: on-failure
     environment:
-      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgis_db:5432/${POSTGRES_DB_NAME}
+      # Inside Docker network containers communicate on default port 5432
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB_NAME=${POSTGRES_DB_NAME}
+      - POSTGIS_HOST=postgis_db
+      - POSTGRES_PORT=5432 # Internal container communication
+      - CENSUS_API_KEY=${CENSUS_API_KEY:-""}
+      - CENSUS_ZCTA_URL=${CENSUS_ZCTA_URL}
+      - CENSUS_ACS_BASE_URL=${CENSUS_ACS_BASE_URL}
+      - DEPLOYMENT_ENV=${DEPLOYMENT_ENV:-development}
       - PYTHONUNBUFFERED=1
     volumes:
       - processor_data:/app/data
+      # - data_collector:/app/data_collectors
+      # Mount only the data directory, not the scripts
+      # This ensures we use the scripts copied during build time
     depends_on:
       postgis_db:
         condition: service_healthy
     networks:
       - app_network
-    command: ["python", "init_db.py"]
+    command: ["python", "/app/init_db.py", "&&", "python", "/app/check_and_fix_data.py", "&&", "python", "/app/update_data.py"]
 
   bay_area_housing_api:
     container_name: bay_area_housing_api
     build:
-      context: ./api
-      dockerfile: Dockerfile
+      context: ./housing_api
+      dockerfile: ApiDockerfile
     restart: always
     environment:
-      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgis_db:5432/${POSTGRES_DB_NAME}
-      - PORT=8000
-      - NODE_ENV=development
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB_NAME=${POSTGRES_DB_NAME}
+      - POSTGIS_HOST=postgis_db
+      - POSTGRES_PORT=5432 # Internal container communication
+      - PORT=${API_PORT:-8000}
+      - NODE_ENV=${NODE_ENV:-production}
     ports:
-      - "8000:8000"
-    depends_on:
-      postgis_db:
-        condition: service_healthy
-      data_processor:
-        condition: service_completed_successfully
+      - "${API_PORT:-8000}:${API_PORT:-8000}"
     volumes:
       - api_data:/app/data
     networks:
       - app_network
+    depends_on:
+      - data_processor
+    healthcheck:
+      test: ["CMD", "wget", "-O", "/dev/null", "-q", "http://localhost:${API_PORT:-8000}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
-volumes:
-  postgres_data:
-  api_data:
-  processor_data:
+  frontend:
+    container_name: bay_area_housing_frontend
+    image: nginx:alpine
+    restart: always
+    ports:
+      - "${WEB_PORT:-8083}:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html
+      - ./frontend/nginx-conf:/etc/nginx/conf.d
+    networks:
+      - app_network
+    depends_on:
+      - bay_area_housing_api
 
 networks:
   app_network:
     driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  api_data:
+    driver: local
+  processor_data:
+    driver: local

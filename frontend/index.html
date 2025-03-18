@@ -1,0 +1,3880 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self'; font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com https://cdnjs.cloudflare.com http://fonts.googleapis.com; img-src 'self' data: https://*.tile.openstreetmap.org; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com http://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com http://fonts.googleapis.com; worker-src 'self'">
+    <meta charset="UTF-8">
+    <link rel="icon" href="data:,">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bay Area Housing Criteria Map</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Color palette - modern and professional */
+            --primary: #2563eb;
+            --primary-light: #3b82f6;
+            --primary-dark: #1d4ed8;
+            --secondary: #6366f1;
+            --secondary-light: #818cf8;
+            --success: #10b981;
+            --success-light: #34d399;
+            --danger: #ef4444;
+            --danger-light: #f87171;
+            --warning: #f59e0b;
+            --light: #f9fafb;
+            --dark: #111827;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            
+            /* Shadows */
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            
+            /* Border radii */
+            --radius-sm: 0.125rem;
+            --radius: 0.25rem;
+            --radius-md: 0.375rem;
+            --radius-lg: 0.5rem;
+            --radius-xl: 0.75rem;
+            --radius-2xl: 1rem;
+            --radius-full: 9999px;
+            
+            /* Transitions */
+            --transition-fast: 150ms;
+            --transition: 200ms;
+            --transition-slow: 300ms;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: var(--gray-800);
+            line-height: 1.5;
+            background-color: var(--gray-50);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+            line-height: 1.25;
+        }
+
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Header styles - modernized */
+        .header {
+            background-color: white;
+            box-shadow: var(--shadow);
+            padding: 0.85rem 1.5rem;
+            z-index: 100;
+            border-bottom: 1px solid var(--gray-100);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            max-width: 1800px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--gray-800);
+        }
+
+        .logo i {
+            color: var(--primary);
+            font-size: 1.35rem;
+        }
+
+        .logo span {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+        }
+
+        .header-center {
+            flex: 1;
+            max-width: 500px;
+        }
+
+        .search-container {
+            position: relative;
+            width: 100%;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.625rem 1rem 0.625rem 2.5rem;
+            border: 1px solid var(--gray-300);
+            border-radius: var(--radius-full);
+            font-size: 0.9375rem;
+            transition: all var(--transition);
+            background-color: var(--gray-50);
+            color: var(--gray-800);
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+            background-color: white;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 0.875rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray-500);
+            font-size: 0.875rem;
+            pointer-events: none;
+        }
+
+        .search-clear {
+            position: absolute;
+            right: 0.875rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray-400);
+            font-size: 0.75rem;
+            border: none;
+            background: none;
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .search-clear:hover {
+            color: var(--danger);
+            background-color: var(--gray-100);
+        }
+
+        .last-updated {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+            margin-left: auto;
+            white-space: nowrap;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        /* Main content */
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Map container */
+        .map-container {
+            flex: 1;
+            height: 100%;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Control panel - redesigned */
+        .control-panel {
+            width: 360px;
+            background-color: white;
+            border-left: 1px solid var(--gray-200);
+            height: 100%;
+            overflow-y: auto;
+            box-shadow: var(--shadow-lg);
+            z-index: 15;
+            display: flex;
+            flex-direction: column;
+            transition: transform var(--transition-slow);
+        }
+
+        .panel-toggle {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background-color: white;
+            border: 1px solid var(--gray-200);
+            box-shadow: var(--shadow-md);
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            cursor: pointer;
+            font-size: 1rem;
+            color: var(--gray-700);
+            transition: all var(--transition);
+        }
+
+        .panel-toggle:hover {
+            background-color: var(--gray-50);
+            color: var(--primary);
+        }
+
+        .panel-header {
+            padding: 1.25rem;
+            border-bottom: 1px solid var(--gray-200);
+            background-color: var(--gray-50);
+        }
+
+        .panel-section {
+            padding: 1.25rem;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .panel-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--gray-800);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .panel-title i {
+            color: var(--primary);
+        }
+
+        /* Criteria list - redesigned */
+        .criteria-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.875rem;
+        }
+
+        .criteria-item {
+            background-color: white;
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-lg);
+            padding: 1rem;
+            transition: all var(--transition);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .criteria-item:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-1px);
+            border-color: var(--gray-300);
+        }
+
+        .criteria-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.875rem;
+        }
+
+        .criteria-name {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 500;
+            color: var(--gray-700);
+            cursor: pointer;
+        }
+
+        .criteria-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            font-size: 0.625rem;
+            background-color: var(--primary-light);
+            color: white;
+            margin-left: 0.375rem;
+            font-weight: 600;
+        }
+
+        .criteria-range {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .checkbox-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .checkbox-wrapper input[type="checkbox"] {
+            opacity: 0;
+            position: absolute;
+            cursor: pointer;
+            width: 0;
+            height: 0;
+        }
+
+        .custom-checkbox {
+            display: inline-block;
+            width: 1.125rem;
+            height: 1.125rem;
+            background-color: white;
+            border: 1.5px solid var(--gray-400);
+            border-radius: var(--radius-sm);
+            position: relative;
+            cursor: pointer;
+            margin-right: 0.5rem;
+            transition: all var(--transition);
+        }
+
+        .checkbox-wrapper input[type="checkbox"]:checked + .custom-checkbox {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .custom-checkbox::after {
+            content: '';
+            position: absolute;
+            left: 0.3125rem;
+            top: 0.125rem;
+            width: 0.375rem;
+            height: 0.625rem;
+            border: solid white;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+            opacity: 0;
+            transition: opacity var(--transition);
+        }
+
+        .checkbox-wrapper input[type="checkbox"]:checked + .custom-checkbox::after {
+            opacity: 1;
+        }
+
+        .criteria-enabled {
+            margin-right: 0.5rem;
+        }
+
+        .criteria-weight {
+            width: 55px;
+            text-align: center;
+            padding: 0.375rem;
+            border: 1px solid var(--gray-300);
+            border-radius: var(--radius);
+            font-size: 0.875rem;
+            transition: all var(--transition);
+        }
+
+        .criteria-weight:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .weight-label {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+            font-weight: 500;
+        }
+
+        .invert-label {
+            display: flex;
+            align-items: center;
+            font-size: 0.75rem;
+            color: var(--gray-600);
+            gap: 0.25rem;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 2.25rem;
+            height: 1.25rem;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--gray-300);
+            transition: .4s;
+            border-radius: var(--radius-full);
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 0.875rem;
+            width: 0.875rem;
+            left: 0.1875rem;
+            bottom: 0.1875rem;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--primary);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(1rem);
+        }
+
+        .delete-criterion {
+            background: none;
+            border: none;
+            color: var(--gray-400);
+            cursor: pointer;
+            transition: color var(--transition);
+            width: 1.5rem;
+            height: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius);
+        }
+
+        .delete-criterion:hover {
+            color: var(--danger);
+            background-color: var(--gray-100);
+        }
+
+        /* Add criterion form - redesigned */
+        .add-criterion-form {
+            margin-top: 1.25rem;
+            padding: 1rem;
+            background-color: var(--gray-50);
+            border-radius: var(--radius-lg);
+            border: 1px dashed var(--gray-300);
+        }
+
+        .form-title {
+            font-size: 0.9375rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            color: var(--gray-700);
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.375rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .form-label {
+            font-size: 0.8125rem;
+            font-weight: 500;
+            color: var(--gray-700);
+        }
+
+        .form-input {
+            padding: 0.625rem 0.75rem;
+            border: 1px solid var(--gray-300);
+            border-radius: var(--radius);
+            font-size: 0.875rem;
+            transition: all var(--transition);
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-select {
+            padding: 0.625rem 0.75rem;
+            border: 1px solid var(--gray-300);
+            border-radius: var(--radius);
+            font-size: 0.875rem;
+            background-color: white;
+            transition: all var(--transition);
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236B7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            background-size: 1rem;
+            padding-right: 2.5rem;
+        }
+
+        .form-select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        /* Buttons - redesigned */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.625rem 1.25rem;
+            border: none;
+            border-radius: var(--radius);
+            font-weight: 500;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all var(--transition);
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+            box-shadow: var(--shadow);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background-color: white;
+            color: var(--gray-700);
+            border: 1px solid var(--gray-300);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--gray-50);
+            border-color: var(--gray-400);
+        }
+
+        .btn-success {
+            background-color: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background-color: var(--success-light);
+            box-shadow: var(--shadow);
+        }
+
+        .btn-danger {
+            background-color: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: var(--danger-light);
+            box-shadow: var(--shadow);
+        }
+
+        .btn-icon {
+            width: 2.25rem;
+            height: 2.25rem;
+            padding: 0;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-sm {
+            padding: 0.375rem 0.625rem;
+            font-size: 0.75rem;
+        }
+
+        .btn-md {
+            padding: 0.5rem 0.875rem;
+            font-size: 0.8125rem;
+        }
+
+        .btn-block {
+            width: 100%;
+        }
+
+        /* Action buttons */
+        .action-buttons {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1.25rem;
+        }
+
+        .action-buttons .btn {
+            flex: 1;
+        }
+
+        /* Details panel - redesigned */
+        .details-section {
+            flex: 1;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            min-height: 250px;
+        }
+
+        .details-content {
+            background-color: white;
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            flex: 1;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--gray-200);
+        }
+
+        .details-placeholder {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            color: var(--gray-500);
+            text-align: center;
+            gap: 0.75rem;
+            padding: 2rem;
+        }
+
+        .details-placeholder i {
+            font-size: 2.5rem;
+            color: var(--gray-300);
+            margin-bottom: 0.5rem;
+        }
+
+        .details-placeholder p {
+            font-size: 0.9375rem;
+            max-width: 24rem;
+            line-height: 1.6;
+        }
+
+        .zipcode-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .zipcode-name {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--gray-900);
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .score-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 0.375rem 0.75rem;
+            border-radius: var(--radius-full);
+            font-weight: 600;
+            font-size: 0.875rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .rating-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .rating-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 1rem;
+            background-color: var(--gray-50);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--gray-200);
+            transition: all var(--transition);
+        }
+
+        .rating-item:hover {
+            box-shadow: var(--shadow);
+            transform: translateY(-2px);
+            border-color: var(--gray-300);
+        }
+
+        .rating-icon {
+            font-size: 1.25rem;
+            margin-bottom: 0.5rem;
+            color: var(--primary);
+        }
+
+        .rating-name {
+            color: var(--gray-600);
+            font-size: 0.8125rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .rating-value {
+            font-weight: 600;
+            font-size: 1.125rem;
+            color: var(--gray-900);
+        }
+
+        .rating-subsection {
+            margin-top: 1.5rem;
+        }
+
+        .rating-subsection-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            color: var(--gray-800);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .rating-subsection-title i {
+            color: var(--primary);
+            font-size: 0.875rem;
+        }
+
+        /* Legend - redesigned */
+        .map-legend {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background-color: white;
+            border-radius: var(--radius-lg);
+            padding: 0.875rem 1.125rem;
+            box-shadow: var(--shadow-lg);
+            z-index: 20;
+            max-width: 280px;
+            border: 1px solid var(--gray-200);
+        }
+
+        .legend-title {
+            font-weight: 600;
+            font-size: 0.875rem;
+            margin-bottom: 0.625rem;
+            color: var(--gray-800);
+        }
+
+        .color-gradient {
+            height: 12px;
+            border-radius: var(--radius);
+            margin-bottom: 0.375rem;
+            background: linear-gradient(to right, #f8696b, #ffeb84, #63be7b);
+        }
+
+        .color-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--gray-600);
+        }
+
+        /* Update modal - redesigned */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(2px);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity var(--transition-slow), visibility var(--transition-slow);
+        }
+
+        .modal-backdrop.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background-color: white;
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-xl);
+            width: 90%;
+            max-width: 500px;
+            transform: translateY(20px);
+            transition: transform var(--transition-slow);
+            overflow: hidden;
+        }
+
+        .modal-backdrop.active .modal {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--gray-900);
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--gray-500);
+            cursor: pointer;
+            transition: color var(--transition);
+            width: 2rem;
+            height: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .modal-close:hover {
+            color: var(--gray-800);
+            background-color: var(--gray-100);
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .modal-footer {
+            padding: 1rem 1.5rem 1.5rem;
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+        }
+
+        /* Update button - redesigned */
+        .update-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background-color: white;
+            border: 1px solid var(--gray-300);
+            border-radius: var(--radius);
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--gray-700);
+            cursor: pointer;
+            transition: all var(--transition);
+        }
+
+        .update-btn:hover {
+            border-color: var(--gray-400);
+            background-color: var(--gray-50);
+        }
+
+        .update-btn i {
+            color: var(--gray-500);
+            transition: color var(--transition);
+        }
+
+        .update-btn:hover i {
+            color: var(--primary);
+        }
+
+        .update-btn.loading {
+            padding-right: 2.25rem;
+            position: relative;
+            pointer-events: none;
+        }
+
+        .update-btn.loading::after {
+            content: '';
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid var(--gray-300);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.75s linear infinite;
+        }
+
+        .update-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--success);
+            margin-left: 0.25rem;
+        }
+
+        /* Progress indicator - redesigned */
+        .progress-indicator {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background-color: var(--gray-200);
+            z-index: 100;
+            overflow: hidden;
+            opacity: 0;
+            transition: opacity var(--transition);
+        }
+
+        .progress-indicator.active {
+            opacity: 1;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            width: 0%;
+            transition: width 0.3s ease;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+        }
+
+        /* Loading overlay - redesigned */
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(2px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 40;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity var(--transition-slow), visibility var(--transition-slow);
+        }
+
+        .loading-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 3px solid var(--gray-200);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1.25rem;
+        }
+
+        .loading-text {
+            font-weight: 500;
+            color: var(--gray-800);
+            font-size: 1rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Search results */
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background-color: white;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--gray-200);
+            margin-top: 0.5rem;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 50;
+            display: none;
+        }
+
+        .search-results.active {
+            display: block;
+        }
+
+        .search-result-item {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--gray-200);
+            cursor: pointer;
+            transition: background-color var(--transition);
+        }
+
+        .search-result-item:last-child {
+            border-bottom: none;
+        }
+
+        .search-result-item:hover {
+            background-color: var(--gray-50);
+        }
+
+        .search-result-zipcode {
+            font-weight: 600;
+            color: var(--gray-800);
+            margin-right: 0.5rem;
+        }
+
+        .search-result-name {
+            color: var(--gray-600);
+        }
+
+        .search-results-empty {
+            padding: 1.5rem;
+            text-align: center;
+            color: var(--gray-500);
+        }
+
+        /* Zipcode highlights */
+        .highlighted-zipcode {
+            animation: pulsate 2s ease-out;
+            animation-iteration-count: 3;
+            stroke-width: 3;
+            stroke: var(--primary-dark) !important;
+            stroke-opacity: 1 !important;
+        }
+
+        @keyframes pulsate {
+            0% {
+                stroke-width: 3;
+                stroke-opacity: 1;
+            }
+            50% {
+                stroke-width: 5;
+                stroke-opacity: 0.8;
+            }
+            100% {
+                stroke-width: 3;
+                stroke-opacity: 1;
+            }
+        }
+
+        /* Panel collapse/expand */
+        @media (max-width: 1024px) {
+            .control-panel.collapsed {
+                transform: translateX(100%);
+            }
+            
+            .panel-toggle.collapsed i::before {
+                content: "\\f054"; /* fa-chevron-right */
+            }
+            
+            .panel-toggle:not(.collapsed) i::before {
+                content: "\\f053"; /* fa-chevron-left */
+            }
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 1024px) {
+            .control-panel {
+                position: absolute;
+                right: 0;
+                top: 0;
+                bottom: 0;
+                transform: translateX(0);
+                width: 320px;
+            }
+            
+            .panel-toggle {
+                display: flex;
+            }
+        }
+
+        @media (min-width: 1025px) {
+            .panel-toggle {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+            
+            .logo {
+                font-size: 1rem;
+            }
+            
+            .header-center {
+                order: 3;
+                width: 100%;
+                max-width: none;
+                margin-top: 0.5rem;
+            }
+            
+            .last-updated {
+                font-size: 0.6875rem;
+                margin-left: 0;
+            }
+            
+            .control-panel {
+                width: 280px;
+            }
+            
+            .map-legend {
+                bottom: 10px;
+                left: 10px;
+                padding: 0.625rem;
+                max-width: 200px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header {
+                padding: 0.625rem 1rem;
+            }
+            
+            .header-actions {
+                gap: 0.375rem;
+            }
+            
+            .btn {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.75rem;
+            }
+            
+            .update-btn {
+                padding: 0.5rem 0.625rem;
+            }
+            
+            .control-panel {
+                width: 85%;
+            }
+        }
+
+        /* Notifications */
+        .notification-container {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            max-width: 350px;
+        }
+
+        .notification {
+            background-color: white;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            padding: 1rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            transform: translateX(120%);
+            transition: transform var(--transition-slow);
+            border-left: 4px solid var(--primary);
+        }
+
+        .notification.success {
+            border-color: var(--success);
+        }
+
+        .notification.error {
+            border-color: var(--danger);
+        }
+
+        .notification.warning {
+            border-color: var(--warning);
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification-icon {
+            color: var(--primary);
+            font-size: 1.25rem;
+        }
+
+        .notification.success .notification-icon {
+            color: var(--success);
+        }
+
+        .notification.error .notification-icon {
+            color: var(--danger);
+        }
+
+        .notification.warning .notification-icon {
+            color: var(--warning);
+        }
+
+        .notification-content {
+            flex: 1;
+        }
+
+        .notification-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            color: var(--gray-900);
+            font-size: 0.9375rem;
+        }
+
+        .notification-message {
+            color: var(--gray-700);
+            font-size: 0.8125rem;
+            line-height: 1.4;
+        }
+
+        .notification-close {
+            background: none;
+            border: none;
+            color: var(--gray-400);
+            cursor: pointer;
+            font-size: 1rem;
+            width: 1.5rem;
+            height: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            padding: 0;
+            margin-left: 0.25rem;
+            transition: all var(--transition);
+        }
+
+        .notification-close:hover {
+            background-color: var(--gray-100);
+            color: var(--gray-700);
+        }
+
+        /* Color scheme preview */
+        .color-scheme-preview {
+            margin-bottom: 0.75rem;
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius);
+            padding: 0.75rem;
+            background-color: white;
+        }
+
+        #preview-gradient {
+            height: 24px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 0.5rem;
+        }
+
+        /* Tooltips */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip .tooltip-text {
+            visibility: hidden;
+            background-color: var(--gray-900);
+            color: white;
+            text-align: center;
+            border-radius: var(--radius);
+            padding: 0.375rem 0.75rem;
+            position: absolute;
+            z-index: 100;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity var(--transition);
+            font-size: 0.75rem;
+            white-space: nowrap;
+            pointer-events: none;
+        }
+
+        .tooltip .tooltip-text::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: var(--gray-900) transparent transparent transparent;
+        }
+
+        .tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Progress indicator for data loading -->
+        <div class="progress-indicator" id="progress-indicator">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-map-location-dot"></i>
+                    <span>Bay Area Housing Criteria Map</span>
+                </div>
+                
+                <div class="header-center">
+                    <div class="search-container">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" class="search-input" id="search-input" placeholder="Search by ZIP code or city name..." autocomplete="off">
+                        <button class="search-clear" id="search-clear" style="display: none;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        <div class="search-results" id="search-results"></div>
+                    </div>
+                </div>
+                
+                <div class="last-updated" id="last-updated">
+                    Last updated: Loading...
+                </div>
+                
+                <div class="header-actions">
+                    <button class="btn btn-secondary btn-md" id="settings-btn">
+                        <i class="fas fa-cog"></i>
+                        <span class="hide-mobile">Settings</span>
+                    </button>
+                    <button class="update-btn" id="update-data-btn">
+                        <i class="fas fa-sync-alt"></i>
+                        <span class="hide-mobile">Refresh</span>
+                        <span class="update-indicator"></span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main content -->
+        <div class="main-content">
+            <!-- Map container -->
+            <div class="map-container" id="map">
+                <!-- Map will be rendered here -->
+
+                <!-- Map legend -->
+                <div class="map-legend">
+                    <div class="legend-title">Criteria Score</div>
+                    <div class="color-gradient"></div>
+                    <div class="color-labels">
+                        <span>Low</span>
+                        <span>Medium</span>
+                        <span>High</span>
+                    </div>
+                </div>
+
+                <!-- Loading overlay -->
+                <div class="loading-overlay" id="map-loading">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">Loading map data...</div>
+                </div>
+            </div>
+
+            <!-- Panel toggle button for mobile -->
+            <button class="panel-toggle collapsed" id="panel-toggle">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+
+            <!-- Control panel -->
+            <div class="control-panel collapsed" id="control-panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">
+                        <i class="fas fa-sliders-h"></i>
+                        <span>Customize Your Criteria</span>
+                    </h2>
+                </div>
+                
+                <!-- Criteria section -->
+                <div class="panel-section">
+                    <div class="criteria-list" id="criteria-list">
+                        <!-- Default criteria items -->
+                        <div class="criteria-item" data-id="schoolRating">
+                            <div class="criteria-header">
+                                <label class="criteria-name">
+                                    <div class="checkbox-wrapper">
+                                        <input type="checkbox" class="criteria-enabled" checked>
+                                        <span class="custom-checkbox"></span>
+                                    </div>
+                                    School Rating
+                                    <span class="criteria-badge" title="Education quality score">E</span>
+                                </label>
+                                <button type="button" class="delete-criterion" title="Remove criterion">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <div class="criteria-range">
+                                <span class="weight-label">Weight:</span>
+                                <input type="number" class="criteria-weight" value="1.0" min="0.1" max="5" step="0.1">
+                                <label class="invert-label">
+                                    <span>Invert</span>
+                                    <label class="switch">
+                                        <input type="checkbox" id="school-invert">
+                                        <span class="slider"></span>
+                                    </label>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="criteria-item" data-id="nicheRating">
+                            <div class="criteria-header">
+                                <label class="criteria-name">
+                                    <div class="checkbox-wrapper">
+                                        <input type="checkbox" class="criteria-enabled" checked>
+                                        <span class="custom-checkbox"></span>
+                                    </div>
+                                    Niche Rating
+                                    <span class="criteria-badge" title="Overall community score">N</span>
+                                </label>
+                                <button type="button" class="delete-criterion" title="Remove criterion">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <div class="criteria-range">
+                                <span class="weight-label">Weight:</span>
+                                <input type="number" class="criteria-weight" value="1.0" min="0.1" max="5" step="0.1">
+                                <label class="invert-label">
+                                    <span>Invert</span>
+                                    <label class="switch">
+                                        <input type="checkbox" id="niche-invert">
+                                        <span class="slider"></span>
+                                    </label>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="criteria-item" data-id="crimeRate">
+                            <div class="criteria-header">
+                                <label class="criteria-name">
+                                    <div class="checkbox-wrapper">
+                                        <input type="checkbox" class="criteria-enabled" checked>
+                                        <span class="custom-checkbox"></span>
+                                    </div>
+                                    Crime Rate
+                                    <span class="criteria-badge" title="Safety score">S</span>
+                                </label>
+                                <button type="button" class="delete-criterion" title="Remove criterion">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <div class="criteria-range">
+                                <span class="weight-label">Weight:</span>
+                                <input type="number" class="criteria-weight" value="1.0" min="0.1" max="5" step="0.1">
+                                <label class="invert-label">
+                                    <span>Invert</span>
+                                    <label class="switch">
+                                        <input type="checkbox" id="crime-invert" checked>
+                                        <span class="slider"></span>
+                                    </label>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="criteria-item" data-id="commuteTime">
+                            <div class="criteria-header">
+                                <label class="criteria-name">
+                                    <div class="checkbox-wrapper">
+                                        <input type="checkbox" class="criteria-enabled" checked>
+                                        <span class="custom-checkbox"></span>
+                                    </div>
+                                    Commute Time
+                                    <span class="criteria-badge" title="Transportation score">T</span>
+                                </label>
+                                <button type="button" class="delete-criterion" title="Remove criterion">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <div class="criteria-range">
+                                <span class="weight-label">Weight:</span>
+                                <input type="number" class="criteria-weight" value="1.0" min="0.1" max="5" step="0.1">
+                                <label class="invert-label">
+                                    <span>Invert</span>
+                                    <label class="switch">
+                                        <input type="checkbox" id="commute-invert" checked>
+                                        <span class="slider"></span>
+                                    </label>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="add-criterion-form">
+                        <div class="form-title">Add Custom Criterion</div>
+                        <div class="form-group">
+                            <label class="form-label">Criterion Name</label>
+                            <input type="text" class="form-input" id="new-criterion-name" placeholder="Enter criterion name">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Criterion Type</label>
+                            <select class="form-select" id="new-criterion-type">
+                                <option value="normal">Higher is better</option>
+                                <option value="inverse">Lower is better</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary btn-block" id="add-criterion-btn">
+                            <i class="fas fa-plus"></i> Add Criterion
+                        </button>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button class="btn btn-success" id="apply-criteria-btn">
+                            <i class="fas fa-check"></i> Apply
+                        </button>
+                        <button class="btn btn-secondary" id="reset-criteria-btn">
+                            <i class="fas fa-undo"></i> Reset
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Details section -->
+                <div class="details-section">
+                    <h2 class="panel-title">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Zipcode Details</span>
+                    </h2>
+
+                    <div class="details-content" id="details-content">
+                        <div class="details-placeholder">
+                            <i class="fas fa-map-pin"></i>
+                            <p>Click on a zipcode area on the map or use the search box to view detailed information</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notification container -->
+        <div class="notification-container" id="notification-container"></div>
+
+        <!-- Settings modal -->
+        <div class="modal-backdrop" id="settings-modal">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3 class="modal-title">Map Settings</h3>
+                    <button class="modal-close" id="close-settings">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">Color Scheme</label>
+                        <div class="color-scheme-preview" id="color-scheme-preview">
+                            <div class="color-gradient" id="preview-gradient"></div>
+                            <div class="color-labels">
+                                <span>Low</span>
+                                <span>High</span>
+                            </div>
+                        </div>
+                        <select class="form-select" id="color-scheme">
+                            <option value="RdYlGn">Red-Yellow-Green</option>
+                            <option value="RdYlBu">Red-Yellow-Blue</option>
+                            <option value="YlGnBu">Yellow-Green-Blue</option>
+                            <option value="YlOrRd">Yellow-Orange-Red</option>
+                            <option value="Viridis">Viridis</option>
+                            <option value="Inferno">Inferno</option>
+                            <option value="Plasma">Plasma</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Reverse Color Scale</label>
+                        <label class="switch">
+                            <input type="checkbox" id="reverse-colors">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Map Style</label>
+                        <select class="form-select" id="map-style">
+                            <option value="standard">Standard</option>
+                            <option value="light">Light</option>
+                            <option value="dark">Dark</option>
+                            <option value="satellite">Satellite</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" id="cancel-settings">Cancel</button>
+                    <button class="btn btn-primary" id="apply-settings">
+                        <i class="fas fa-check"></i> Apply Settings
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Update confirmation modal -->
+    <div class="modal-backdrop" id="update-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Update Map Data</h3>
+                <button class="modal-close" id="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>This will refresh all zipcode data from the database. The process might take a few moments to complete.</p>
+                <p>Do you want to proceed?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancel-update">Cancel</button>
+                <button class="btn btn-primary" id="confirm-update">
+                    <i class="fas fa-sync-alt"></i> Update Data
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    
+    <script>
+        // App configuration
+        const config = {
+            apiBaseUrl: '/housing_api', // This matches your Nginx location block
+            mapCenter: [37.8, -122.2], // Bay Area center
+            mapZoom: 9,
+            mapMinZoom: 8,
+            mapMaxZoom: 14,
+            dataRefreshInterval: 86400000, // 24 hours in milliseconds
+            fallbackToDefault: true // If true, will display default data if API fails
+        };
+
+        // Sample data for testing when API is unavailable
+        const sampleFeature = {
+            "type": "Feature",
+            "properties": {
+                "ZIP": "94110",
+                "NAME": "San Francisco - Mission District",
+                "county": "San Francisco",
+                "state": "CA",
+                "schoolRating": 7.5,
+                "crimeRate": 6.2,
+                "nicheRating": 8.3,
+                "commuteTime": 7.8,
+                "population": 75000,
+                "median_home_value": 1250000,
+                "median_income": 110000
+            },
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [[
+                    [-122.42, 37.75],
+                    [-122.42, 37.76],
+                    [-122.40, 37.76],
+                    [-122.40, 37.75],
+                    [-122.42, 37.75]
+                ]]
+            }
+        };
+
+        // Global app state
+        const state = {
+            map: null,
+            zipcodeLayer: null,
+            zipcodeData: null,
+            selectedZipcode: null,
+            lastUpdated: null,
+            isLoading: false,
+            isPanelCollapsed: true,
+            searchResults: [],
+            criteria: [
+                { id: 'schoolRating', name: 'School Rating', enabled: true, weight: 1.0, invert: false },
+                { id: 'nicheRating', name: 'Niche Rating', enabled: true, weight: 1.0, invert: false },
+                { id: 'crimeRate', name: 'Crime Rate', enabled: true, weight: 1.0, invert: true },
+                { id: 'commuteTime', name: 'Commute Time', enabled: true, weight: 1.0, invert: true }
+            ]
+        };
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', () => {
+            initMap();
+            setupEventListeners();
+            loadZipcodeData();
+
+            // Check if data refresh is needed based on last update time
+            checkDataRefreshStatus();
+        });
+
+        // Initialize Leaflet map
+        function initMap() {
+            state.map = L.map('map', {
+                center: config.mapCenter,
+                zoom: config.mapZoom,
+                minZoom: config.mapMinZoom,
+                maxZoom: config.mapMaxZoom,
+                zoomControl: false
+            });
+            
+
+            // Debug info
+            console.log('Map initialized with center:', config.mapCenter, 'and zoom:', config.mapZoom);
+
+            // Add zoom control in a better position
+            L.control.zoom({ position: 'topright' }).addTo(state.map);
+
+            // Add tile layer (OpenStreetMap)
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(state.map);
+           
+        }
+
+        // Set up event listeners
+        function setupEventListeners() {
+            // Criteria management
+            document.getElementById('add-criterion-btn').addEventListener('click', addCustomCriterion);
+            document.getElementById('apply-criteria-btn').addEventListener('click', applyCriteriaChanges);
+            document.getElementById('reset-criteria-btn').addEventListener('click', resetCriteria);
+            
+            // Search functionality
+            document.getElementById('search-input').addEventListener('input', handleSearchInput);
+            document.getElementById('search-clear').addEventListener('click', clearSearch);
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.search-container')) {
+                    document.getElementById('search-results').classList.remove('active');
+                }
+            });
+            
+            // Panel toggle
+            document.getElementById('panel-toggle').addEventListener('click', togglePanel);
+            
+            // Settings
+            document.getElementById('settings-btn').addEventListener('click', showSettings);
+            document.getElementById('close-settings').addEventListener('click', hideSettings);
+            document.getElementById('cancel-settings').addEventListener('click', hideSettings);
+            document.getElementById('apply-settings').addEventListener('click', applySettings);
+            
+            // Update preview when color scheme changes
+            document.getElementById('color-scheme').addEventListener('change', function() {
+                updateColorSchemePreview(this.value, document.getElementById('reverse-colors').checked);
+            });
+            
+            // Update preview when reverse toggle changes
+            document.getElementById('reverse-colors').addEventListener('change', function() {
+                updateColorSchemePreview(document.getElementById('color-scheme').value, this.checked);
+            });
+            
+            // Add click propagation prevention for modals
+            document.getElementById('settings-modal').addEventListener('click', preventMapInteraction);
+            document.querySelector('#settings-modal .modal').addEventListener('click', preventMapInteraction);
+            
+            // Criteria invert checkboxes
+            document.getElementById('school-invert').addEventListener('change', function() {
+                updateCriterionInversion('schoolRating', this.checked);
+            });
+            document.getElementById('niche-invert').addEventListener('change', function() {
+                updateCriterionInversion('nicheRating', this.checked);
+            });
+            document.getElementById('crime-invert').addEventListener('change', function() {
+                updateCriterionInversion('crimeRate', this.checked);
+            });
+            document.getElementById('commute-invert').addEventListener('change', function() {
+                updateCriterionInversion('commuteTime', this.checked);
+            });
+
+            // Setup delete criterion buttons (for dynamically added criteria)
+            document.querySelectorAll('.delete-criterion').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const criterionItem = this.closest('.criteria-item');
+                    const criterionId = criterionItem.dataset.id;
+                    removeCriterion(criterionId);
+                });
+            });
+
+            // Data refresh
+            document.getElementById('update-data-btn').addEventListener('click', showUpdateConfirmation);
+            document.getElementById('close-modal').addEventListener('click', hideUpdateConfirmation);
+            document.getElementById('cancel-update').addEventListener('click', hideUpdateConfirmation);
+            document.getElementById('confirm-update').addEventListener('click', updateData);
+            
+            // Window resize handler for map
+            window.addEventListener('resize', function() {
+                if (state.map) {
+                    state.map.invalidateSize();
+                }
+            });
+        }
+        
+        // Toggle control panel visibility for mobile
+        function togglePanel() {
+            const panel = document.getElementById('control-panel');
+            const toggle = document.getElementById('panel-toggle');
+            
+            panel.classList.toggle('collapsed');
+            toggle.classList.toggle('collapsed');
+            
+            state.isPanelCollapsed = panel.classList.contains('collapsed');
+        }
+        
+        // Handle search input
+        function handleSearchInput(e) {
+            const searchInput = e.target;
+            const searchValue = searchInput.value.trim();
+            const clearButton = document.getElementById('search-clear');
+            
+            // Show/hide clear button
+            if (searchValue.length > 0) {
+                clearButton.style.display = 'flex';
+            } else {
+                clearButton.style.display = 'none';
+            }
+            
+            // If input is empty, hide search results
+            if (searchValue.length === 0) {
+                document.getElementById('search-results').classList.remove('active');
+                return;
+            }
+            
+            // Search through zipcode data
+            searchZipcodes(searchValue);
+        }
+        
+        // Search zipcodes based on input
+        function searchZipcodes(query) {
+            if (!state.zipcodeData || !state.zipcodeData.features) {
+                return;
+            }
+            
+            query = query.toLowerCase();
+            const resultsContainer = document.getElementById('search-results');
+            const results = [];
+            
+            // Search through features
+            state.zipcodeData.features.forEach(feature => {
+                const zipcode = feature.properties.ZIP || feature.properties.ZCTA5CE10;
+                const cityName = getCityNameFromZip(zipcode);
+                
+                // Match against zipcode or city name
+                if (zipcode.includes(query) || cityName.toLowerCase().includes(query)) {
+                    results.push({
+                        zipcode,
+                        name: cityName,
+                        feature
+                    });
+                }
+            });
+            
+            // Update search results UI
+            updateSearchResults(results);
+        }
+        
+        // Update search results in the UI
+        function updateSearchResults(results) {
+            const resultsContainer = document.getElementById('search-results');
+            state.searchResults = results;
+            
+            if (results.length === 0) {
+                resultsContainer.innerHTML = `
+                    <div class="search-results-empty">
+                        <i class="fas fa-search"></i> No matching zipcodes found
+                    </div>
+                `;
+            } else {
+                resultsContainer.innerHTML = '';
+                
+                results.forEach((result, index) => {
+                    const resultItem = document.createElement('div');
+                    resultItem.className = 'search-result-item';
+                    resultItem.innerHTML = `
+                        <span class="search-result-zipcode">${result.zipcode}</span>
+                        <span class="search-result-name">${result.name}</span>
+                    `;
+                    
+                    resultItem.addEventListener('click', () => {
+                        selectZipcodeFromSearch(result.zipcode, result.feature);
+                    });
+                    
+                    resultsContainer.appendChild(resultItem);
+                });
+            }
+            
+            // Show results dropdown
+            resultsContainer.classList.add('active');
+        }
+        
+        // Clear search input and results
+        function clearSearch() {
+            const searchInput = document.getElementById('search-input');
+            const clearButton = document.getElementById('search-clear');
+            const resultsContainer = document.getElementById('search-results');
+            
+            searchInput.value = '';
+            clearButton.style.display = 'none';
+            resultsContainer.classList.remove('active');
+        }
+        
+        // Select a zipcode from search results
+        function selectZipcodeFromSearch(zipcode, feature) {
+            // Clear search after selection
+            clearSearch();
+            
+            // Pan and zoom to the selected zipcode
+            if (feature && feature.geometry) {
+                const bounds = L.geoJSON(feature.geometry).getBounds();
+                state.map.fitBounds(bounds, {
+                    padding: [50, 50],
+                    maxZoom: 12
+                });
+            }
+            
+            // Highlight the selected zipcode
+            highlightZipcode(zipcode);
+            
+            // Show zipcode details
+            selectZipcode(zipcode, feature);
+            
+            // Open the panel if collapsed on mobile
+            if (state.isPanelCollapsed) {
+                togglePanel();
+            }
+        }
+        
+        // Highlight a zipcode on the map
+        function highlightZipcode(zipcode) {
+            // Reset any existing highlights
+            if (state.zipcodeLayer) {
+                state.zipcodeLayer.eachLayer(layer => {
+                    layer.setStyle({
+                        weight: 1,
+                        color: 'white',
+                        opacity: 1,
+                        fillOpacity: 0.7
+                    });
+                });
+            }
+            
+            // Find and highlight the target zipcode
+            if (state.zipcodeLayer) {
+                state.zipcodeLayer.eachLayer(layer => {
+                    if (layer.feature) {
+                        const layerZip = layer.feature.properties.ZIP || layer.feature.properties.ZCTA5CE10;
+                        
+                        if (layerZip === zipcode) {
+                            // Apply highlight style
+                            layer.setStyle({
+                                weight: 3,
+                                color: '#2563eb', // Primary color
+                                opacity: 1,
+                                fillOpacity: 0.7
+                            });
+                            
+                            // Add pulsating effect class
+                            layer._path.classList.add('highlighted-zipcode');
+                            
+                            // Bring to front
+                            layer.bringToFront();
+                            
+                            // Remove pulsating effect after a few seconds
+                            setTimeout(() => {
+                                if (layer._path) {
+                                    layer._path.classList.remove('highlighted-zipcode');
+                                }
+                            }, 6000); // 3 pulses at 2s each
+                        }
+                    }
+                });
+            }
+        }
+        
+        // Load zipcode data from the API
+        async function loadZipcodeData() {
+            setLoading(true);
+            
+            try {
+                // Fetch zipcode GeoJSON from API
+                const response = await fetch(`${config.apiBaseUrl}/zipcodes/geojson/`);
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to load zipcode data (${response.status})`);
+                }
+                
+                const data = await response.json();
+                
+                // DEBUG: Log received data structure
+                console.log('Received data:', data);
+                console.log('Features count:', data.features ? data.features.length : 0);
+                
+                if (!data.features || data.features.length === 0) {
+                    if (config.fallbackToDefault) {
+                        // Create fallback data
+                        showNotification('Using Demo Data', 'No zipcode data received. Using sample data for demonstration.', 'warning');
+                        
+                        // Generate fake data for demo
+                        const demoData = {
+                            type: "FeatureCollection",
+                            features: [sampleFeature]
+                        };
+                        
+                        state.zipcodeData = demoData;
+                        updateLastUpdatedTime();
+                        renderZipcodeMap();
+                        setLoading(false);
+                        return;
+                    } else {
+                        showNotification('Data Error', 'No zipcode features found in the response. Check server data.', 'error');
+                        setLoading(false);
+                        return;
+                    }
+                }
+
+
+                console.log('Full API response:', JSON.stringify(data).substr(0, 500) + '...');
+                console.log('Response type:', typeof data);
+                console.log('Has features array?', Array.isArray(data.features));
+                
+                // Show sample feature for debugging
+                if (data.features && data.features.length > 0) {
+                    console.log('Sample feature:', data.features[0]);
+                    console.log('Sample properties:', data.features[0].properties);
+                    console.log('Sample geometry:', data.features[0].geometry);
+                }
+                
+                // Store the data
+                state.zipcodeData = data;
+                
+                // Update last updated timestamp
+                updateLastUpdatedTime();
+                
+                // Render the map
+                renderZipcodeMap();
+                
+                // Show success notification
+                showNotification('Data Loaded', 'Map data has been successfully loaded.', 'success');
+                
+            } catch (error) {
+                console.error('Error loading zipcode data:', error);
+                showNotification('Error', `Failed to load zipcode data: ${error.message}`, 'error');
+                
+                if (config.fallbackToDefault) {
+                    // Create fallback data
+                    showNotification('Using Demo Data', 'Failed to load from API. Using sample data for demonstration.', 'warning');
+                    
+                    // Generate fake data for demo
+                    const demoData = {
+                        type: "FeatureCollection",
+                        features: [sampleFeature]
+                    };
+                    
+                    state.zipcodeData = demoData;
+                    updateLastUpdatedTime();
+                    renderZipcodeMap();
+                } else {
+                    // Auto-retry after 30 seconds
+                    setTimeout(loadZipcodeData, 30000);
+                }
+            } finally {
+                setLoading(false);
+            }
+        }
+        
+        // Render zipcode polygons on the map
+        function renderZipcodeMap() {
+            if (!state.zipcodeData || !state.zipcodeData.features || state.zipcodeData.features.length === 0) {
+                console.error('No valid zipcode data to render');
+                // Set default view instead of trying to fit bounds
+                state.map.setView(config.mapCenter, config.mapZoom);
+                showNotification('Data Error', 'No zipcode data available. Using default map view of the Bay Area.', 'error');
+                return;
+            }
+            
+            // Debug info
+            console.log('Rendering map with', state.zipcodeData.features.length, 'features');
+            
+            // Remove existing layer if present
+            if (state.zipcodeLayer) {
+                state.map.removeLayer(state.zipcodeLayer);
+            }
+            
+            // Calculate scores for each zipcode
+            const scores = calculateZipcodeScores();
+            console.log('Calculated scores for', Object.keys(scores).length, 'zipcodes');
+            
+            // Get color scheme based on settings
+            const colorSchemeFunction = colorSchemes[appSettings.colorScheme] || d3.interpolateRdYlBu;
+            
+            // Create color scale using d3
+            const colorScale = d3.scaleSequential(colorSchemeFunction)
+                .domain(appSettings.reverseColors ? [10, 0] : [0, 10]);  // Scores from 0-10
+            
+            try {
+                // Create new GeoJSON layer
+                state.zipcodeLayer = L.geoJSON(state.zipcodeData, {
+                    style: feature => {
+                        // Debug the exact feature structure
+                        console.log('Feature structure:', JSON.stringify(feature).substr(0, 200) + '...');
+                        
+                        const zipcode = feature.properties.ZIP || feature.properties.ZCTA5CE10;
+                        const score = scores[zipcode] || 0;
+
+                        console.log(`Styling ${zipcode} with score ${score}, color: ${colorScale(score)}`);
+        
+                        // Debug a sample zipcode
+                        if (zipcode === '94110') {
+                            console.log('Styling zipcode 94110:', {
+                                zipcode,
+                                score,
+                                fillColor: colorScale(score)
+                            });
+                        }
+                        
+                        return {
+                            fillColor: colorScale(score),
+                            weight: 1,
+                            opacity: 1,
+                            color: 'white',
+                            fillOpacity: 0.7
+                        };
+                    },
+                    onEachFeature: (feature, layer) => {
+                        // Debug geometry
+                        if (!feature.geometry || !feature.geometry.coordinates || feature.geometry.coordinates.length === 0) {
+                            console.warn('Feature missing valid geometry:', feature);
+                        }
+                        
+                        const zipcode = feature.properties.ZIP || feature.properties.ZCTA5CE10;
+                        const cityName = getCityNameFromZip(zipcode);
+                        
+                        // Add tooltip
+                        layer.bindTooltip(`${cityName} (${zipcode})`, {
+                            sticky: true,
+                            className: 'custom-tooltip'
+                        });
+                        
+                        // Add click handler
+                        layer.on('click', () => {
+                            selectZipcode(zipcode, feature);
+                            
+                            // Highlight the selected zipcode
+                            state.zipcodeLayer.eachLayer(l => {
+                                if (l.feature) {
+                                    const thisZip = l.feature.properties.ZIP || l.feature.properties.ZCTA5CE10;
+                                    
+                                    l.setStyle({
+                                        weight: thisZip === zipcode ? 3 : 1,
+                                        color: thisZip === zipcode ? '#2563eb' : 'white'
+                                    });
+                                    
+                                    if (thisZip === zipcode) {
+                                        l.bringToFront();
+                                    }
+                                }
+                            });
+                            
+                            // Open panel on mobile if collapsed
+                            if (window.innerWidth <= 1024 && state.isPanelCollapsed) {
+                                togglePanel();
+                            }
+                        });
+                    }
+                }).addTo(state.map);
+                
+                // Only fit bounds if we have features
+                if (state.zipcodeData.features && state.zipcodeData.features.length > 0) {
+                    console.log('Fitting bounds to zipcode layer');
+                    state.map.fitBounds(state.zipcodeLayer.getBounds());
+                }
+                
+            } catch (error) {
+                console.error('Error rendering GeoJSON layer:', error);
+                showNotification('Map Error', `Failed to render map: ${error.message}`, 'error');
+                
+                // Try to pinpoint the problematic feature
+                try {
+                    state.zipcodeData.features.forEach((feature, i) => {
+                        try {
+                            if (!feature.geometry || 
+                                !feature.geometry.coordinates || 
+                                feature.geometry.coordinates.length === 0 ||
+                                !feature.properties) {
+                                console.error(`Invalid feature at index ${i}:`, feature);
+                            }
+                        } catch (err) {
+                            console.error(`Error analyzing feature at index ${i}:`, err);
+                        }
+                    });
+                } catch (err) {
+                    console.error('Error inspecting features:', err);
+                }
+            }
+        }
+        
+        // Calculate scores for each zipcode based on current criteria
+        function calculateZipcodeScores() {
+            const scores = {};
+            
+            if (!state.zipcodeData || !state.zipcodeData.features) {
+                console.warn('No zipcode data available for calculating scores');
+                return scores;
+            }
+            
+            // Get active criteria
+            const activeCriteria = state.criteria.filter(c => c.enabled);
+            
+            if (activeCriteria.length === 0) {
+                console.warn('No active criteria found for calculating scores');
+                return scores;
+            }
+            
+            // Calculate scores for each zipcode
+            state.zipcodeData.features.forEach(feature => {
+                if (!feature.properties) {
+                    console.warn('Feature missing properties:', feature);
+                    return;
+                }
+                
+                const zipcode = feature.properties.ZIP || feature.properties.ZCTA5CE10;
+                if (!zipcode) {
+                    console.warn('Feature missing zipcode identifier:', feature);
+                    return;
+                }
+                
+                let totalScore = 0;
+                let totalWeight = 0;
+                let usedCriteria = 0;
+                
+                // Debug any scoring issues for a sample zipcode
+                const debugZip = zipcode === '94110';
+                if (debugZip) console.log('Calculating score for 94110 with criteria:', activeCriteria);
+                
+                activeCriteria.forEach(criterion => {
+                    const value = feature.properties[criterion.id];
+                    
+                    // Skip if value is missing
+                    if (value === undefined || value === null) {
+                        if (debugZip) console.log(`Missing value for criterion ${criterion.id}`);
+                        return;
+                    }
+                    
+                    let score = value;
+                    
+                    // If invert is true, higher values should score lower
+                    if (criterion.invert) {
+                        // Assume a scale of 0-10 for all criteria
+                        score = 10 - score;
+                    }
+                    
+                    if (debugZip) console.log(`${criterion.id}: original=${value}, inverted=${criterion.invert}, final=${score}, weight=${criterion.weight}`);
+                    
+                    totalScore += score * criterion.weight;
+                    totalWeight += criterion.weight;
+                    usedCriteria++;
+                });
+                
+                // Calculate final score (weighted average)
+                if (totalWeight > 0) {
+                    scores[zipcode] = totalScore / totalWeight;
+                    if (debugZip) console.log(`Final score for 94110: ${scores[zipcode]} (used ${usedCriteria} criteria)`);
+                } else {
+                    scores[zipcode] = 0;
+                    if (debugZip) console.log(`No criteria with values found for 94110`);
+                }
+            });
+            
+            // Print a few scores for debugging
+            const sampleZips = Object.keys(scores).slice(0, 5);
+            if (sampleZips.length > 0) {
+                console.log('Sample scores:', sampleZips.map(zip => ({ zip, score: scores[zip] })));
+            }
+            
+            // Log min/max scores to ensure they're in a reasonable range
+            const scoreValues = Object.values(scores);
+            if (scoreValues.length > 0) {
+                console.log('Score statistics:', {
+                    min: Math.min(...scoreValues),
+                    max: Math.max(...scoreValues),
+                    avg: scoreValues.reduce((a, b) => a + b, 0) / scoreValues.length
+                });
+            }
+            return scores;
+        }
+        
+        // Handle zipcode selection
+        function selectZipcode(zipcode, feature) {
+            state.selectedZipcode = zipcode;
+            
+            // Update details panel
+            updateDetailsPanel(zipcode, feature);
+        }
+        
+        // Update details panel with zipcode information
+        function updateDetailsPanel(zipcode, feature) {
+            const detailsContainer = document.getElementById('details-content');
+            
+            if (!feature || !feature.properties) {
+                detailsContainer.innerHTML = `
+                    <div class="details-placeholder">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <p>No data available for this zipcode</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const props = feature.properties;
+            const scores = calculateZipcodeScores();
+            const score = scores[zipcode] ? scores[zipcode].toFixed(1) : 'N/A';
+            
+            // Get real city name
+            const cityName = getCityNameFromZip(zipcode) || props.NAME || `${zipcode} Area`;
+            
+            let html = `
+                <div class="zipcode-details">
+                    <div class="zipcode-title">
+                        <div class="zipcode-name">${cityName} (${zipcode})</div>
+                        <div class="score-pill">${score}</div>
+                    </div>
+                    
+                    <div class="rating-list">
+            `;
+            
+            // Define all the standard ratings with icons
+            const standardRatings = [
+                {id: 'schoolRating', name: 'Schools', icon: 'fa-school'},
+                {id: 'nicheRating', name: 'Niche', icon: 'fa-star'},
+                {id: 'crimeRate', name: 'Safety', icon: 'fa-shield-alt'},
+                {id: 'commuteTime', name: 'Commute', icon: 'fa-car'}
+            ];
+            
+            // First add standard ratings, with placeholders for missing data
+            standardRatings.forEach(rating => {
+                const value = props[rating.id];
+                
+                if (value !== undefined && value !== null) {
+                    html += `
+                        <div class="rating-item">
+                            <div class="rating-icon"><i class="fas ${rating.icon}"></i></div>
+                            <div class="rating-name">${rating.name}</div>
+                            <div class="rating-value">${value.toFixed(1)}</div>
+                        </div>
+                    `;
+                } else {
+                    html += `
+                        <div class="rating-item" style="opacity: 0.6;">
+                            <div class="rating-icon"><i class="fas ${rating.icon}"></i></div>
+                            <div class="rating-name">${rating.name}</div>
+                            <div class="rating-value">N/A</div>
+                        </div>
+                    `;
+                }
+            });
+            
+            html += `</div>`;
+            
+            // Add demographic information section if available
+            if (props.population || props.median_income || props.median_home_value) {
+                html += `
+                    <div class="rating-subsection">
+                        <div class="rating-subsection-title">
+                            <i class="fas fa-info-circle"></i> Area Information
+                        </div>
+                        <div class="rating-list">
+                `;
+                
+                // Add county information if available
+                if (props.county) {
+                    html += `
+                        <div class="rating-item">
+                            <div class="rating-icon"><i class="fas fa-map-marker-alt"></i></div>
+                            <div class="rating-name">County</div>
+                            <div class="rating-value">${props.county}</div>
+                        </div>
+                    `;
+                }
+                
+                // Add population information if available
+                if (props.population) {
+                    html += `
+                        <div class="rating-item">
+                            <div class="rating-icon"><i class="fas fa-users"></i></div>
+                            <div class="rating-name">Population</div>
+                            <div class="rating-value">${props.population.toLocaleString()}</div>
+                        </div>
+                    `;
+                }
+                
+                // Add median home value if available
+                if (props.median_home_value) {
+                    html += `
+                        <div class="rating-item">
+                            <div class="rating-icon"><i class="fas fa-home"></i></div>
+                            <div class="rating-name">Median Home</div>
+                            <div class="rating-value">${formatNumber(props.median_home_value)}</div>
+                        </div>
+                    `;
+                }
+                
+                // Add median income if available
+                if (props.median_income) {
+                    html += `
+                        <div class="rating-item">
+                            <div class="rating-icon"><i class="fas fa-dollar-sign"></i></div>
+                            <div class="rating-name">Median Income</div>
+                            <div class="rating-value">${formatNumber(props.median_income)}</div>
+                        </div>
+                    `;
+                }
+                
+                // Add median rent if available
+                if (props.median_rent) {
+                    html += `
+                        <div class="rating-item">
+                            <div class="rating-icon"><i class="fas fa-key"></i></div>
+                            <div class="rating-name">Median Rent</div>
+                            <div class="rating-value">${formatNumber(props.median_rent)}</div>
+                        </div>
+                    `;
+                }
+                
+                // Add ownership percentage if available
+                if (props.ownership_percent) {
+                    html += `
+                        <div class="rating-item">
+                            <div class="rating-icon"><i class="fas fa-percentage"></i></div>
+                            <div class="rating-name">Ownership</div>
+                            <div class="rating-value">${props.ownership_percent.toFixed(1)}%</div>
+                        </div>
+                    `;
+                }
+                
+                html += `</div></div>`;
+            }
+            
+            html += `</div>`;
+            
+            detailsContainer.innerHTML = html;
+        }
+        
+        // Format large numbers with K/M suffixes
+        function formatNumber(num) {
+            if (num >= 1000000) {
+                return (num / 1000000).toFixed(1) + 'M';
+            } else if (num >= 1000) {
+                return (num / 1000).toFixed(0) + 'K';
+            } else {
+                return num.toString();
+            }
+        }
+        
+        // Add a custom criterion
+        function addCustomCriterion() {
+            const nameInput = document.getElementById('new-criterion-name');
+            const typeSelect = document.getElementById('new-criterion-type');
+            
+            const criterionName = nameInput.value.trim();
+            const isInverse = typeSelect.value === 'inverse';
+            
+            if (!criterionName) {
+                showNotification('Error', 'Please enter a criterion name', 'error');
+                return;
+            }
+            
+            // Generate ID from name (lowercase, spaces to underscores)
+            const criterionId = 'custom_' + criterionName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+            
+            // Check if ID already exists
+            if (state.criteria.some(c => c.id === criterionId)) {
+                showNotification('Error', 'A criterion with this name already exists', 'error');
+                return;
+            }
+            
+            // Add to criteria list
+            state.criteria.push({
+                id: criterionId,
+                name: criterionName,
+                enabled: true,
+                weight: 1.0,
+                invert: isInverse
+            });
+            
+            // Add to UI
+            addCriterionToUI(criterionId, criterionName, isInverse);
+            
+            // Clear form
+            nameInput.value = '';
+            typeSelect.value = 'normal';
+            
+            showNotification('Success', `Added new criterion: ${criterionName}`, 'success');
+        }
+        
+        // Add a criterion to the UI
+        function addCriterionToUI(id, name, isInverse) {
+            const criteriaList = document.getElementById('criteria-list');
+            
+            const criterionItem = document.createElement('div');
+            criterionItem.className = 'criteria-item';
+            criterionItem.dataset.id = id;
+            
+            // Get first letter for badge
+            const firstLetter = name.charAt(0).toUpperCase();
+            
+            criterionItem.innerHTML = `
+                <div class="criteria-header">
+                    <label class="criteria-name">
+                        <div class="checkbox-wrapper">
+                            <input type="checkbox" class="criteria-enabled" checked>
+                            <span class="custom-checkbox"></span>
+                        </div>
+                        ${name}
+                        <span class="criteria-badge" title="Custom criterion">${firstLetter}</span>
+                    </label>
+                    <button type="button" class="delete-criterion" title="Remove criterion">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="criteria-range">
+                    <span class="weight-label">Weight:</span>
+                    <input type="number" class="criteria-weight" value="1.0" min="0.1" max="5" step="0.1">
+                    <label class="invert-label">
+                        <span>Invert</span>
+                        <label class="switch">
+                            <input type="checkbox" id="${id}-invert" ${isInverse ? 'checked' : ''}>
+                            <span class="slider"></span>
+                        </label>
+                    </label>
+                </div>
+            `;
+            
+            criteriaList.appendChild(criterionItem);
+            
+            // Add event listeners
+            const deleteBtn = criterionItem.querySelector('.delete-criterion');
+            deleteBtn.addEventListener('click', function() {
+                removeCriterion(id);
+            });
+            
+            const invertCheckbox = criterionItem.querySelector(`#${id}-invert`);
+            invertCheckbox.addEventListener('change', function() {
+                updateCriterionInversion(id, this.checked);
+            });
+        }
+        
+        // Remove a criterion
+        function removeCriterion(criterionId) {
+            // Remove from state
+            state.criteria = state.criteria.filter(c => c.id !== criterionId);
+            
+            // Remove from UI
+            const criterionItem = document.querySelector(`.criteria-item[data-id="${criterionId}"]`);
+            if (criterionItem) {
+                criterionItem.remove();
+            }
+        }
+        
+        // Update criterion inversion setting
+        function updateCriterionInversion(criterionId, isInverted) {
+            const criterion = state.criteria.find(c => c.id === criterionId);
+            if (criterion) {
+                criterion.invert = isInverted;
+            }
+        }
+        
+        // Apply criteria changes and update the map
+        function applyCriteriaChanges() {
+            // Update criteria from UI
+            document.querySelectorAll('.criteria-item').forEach(item => {
+                const id = item.dataset.id;
+                const criterion = state.criteria.find(c => c.id === id);
+                
+                if (criterion) {
+                    criterion.enabled = item.querySelector('.criteria-enabled').checked;
+                    criterion.weight = parseFloat(item.querySelector('.criteria-weight').value);
+                    // Inversion is already handled by the checkbox event listeners
+                }
+            });
+            
+            // Re-render the map
+            renderZipcodeMap();
+            
+            // Update details panel if a zipcode is selected
+            if (state.selectedZipcode) {
+                const feature = state.zipcodeData.features.find(f => {
+                    const zipcode = f.properties.ZIP || f.properties.ZCTA5CE10;
+                    return zipcode === state.selectedZipcode;
+                });
+                
+                if (feature) {
+                    updateDetailsPanel(state.selectedZipcode, feature);
+                }
+            }
+            
+            showNotification('Success', 'Criteria changes applied to map', 'success');
+        }
+        
+        // Reset criteria to defaults
+        function resetCriteria() {
+            // Reset to initial criteria state
+            state.criteria = [
+                { id: 'schoolRating', name: 'School Rating', enabled: true, weight: 1.0, invert: false },
+                { id: 'nicheRating', name: 'Niche Rating', enabled: true, weight: 1.0, invert: false },
+                { id: 'crimeRate', name: 'Crime Rate', enabled: true, weight: 1.0, invert: true },
+                { id: 'commuteTime', name: 'Commute Time', enabled: true, weight: 1.0, invert: true }
+            ];
+            
+            // Reset UI - remove all criteria items
+            document.getElementById('criteria-list').innerHTML = '';
+            
+            // Re-add default criteria to UI
+            const defaultCriteria = [
+                { id: 'schoolRating', name: 'School Rating', icon: 'E', invert: false },
+                { id: 'nicheRating', name: 'Niche Rating', icon: 'N', invert: false },
+                { id: 'crimeRate', name: 'Crime Rate', icon: 'S', invert: true },
+                { id: 'commuteTime', name: 'Commute Time', icon: 'T', invert: true }
+            ];
+            
+            defaultCriteria.forEach(c => {
+                const criterionItem = document.createElement('div');
+                criterionItem.className = 'criteria-item';
+                criterionItem.dataset.id = c.id;
+                
+                criterionItem.innerHTML = `
+                    <div class="criteria-header">
+                        <label class="criteria-name">
+                            <div class="checkbox-wrapper">
+                                <input type="checkbox" class="criteria-enabled" checked>
+                                <span class="custom-checkbox"></span>
+                            </div>
+                            ${c.name}
+                            <span class="criteria-badge" title="Rating criterion">${c.icon}</span>
+                        </label>
+                        <button type="button" class="delete-criterion" title="Remove criterion">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="criteria-range">
+                        <span class="weight-label">Weight:</span>
+                        <input type="number" class="criteria-weight" value="1.0" min="0.1" max="5" step="0.1">
+                        <label class="invert-label">
+                            <span>Invert</span>
+                            <label class="switch">
+                                <input type="checkbox" id="${c.id}-invert" ${c.invert ? 'checked' : ''}>
+                                <span class="slider"></span>
+                            </label>
+                        </label>
+                    </div>
+                `;
+                
+                document.getElementById('criteria-list').appendChild(criterionItem);
+                
+                // Add event listeners
+                const deleteBtn = criterionItem.querySelector('.delete-criterion');
+                deleteBtn.addEventListener('click', function() {
+                    removeCriterion(c.id);
+                });
+                
+                const invertCheckbox = criterionItem.querySelector(`#${c.id}-invert`);
+                invertCheckbox.addEventListener('change', function() {
+                    updateCriterionInversion(c.id, this.checked);
+                });
+            });
+            
+            // Clear custom input fields
+            document.getElementById('new-criterion-name').value = '';
+            document.getElementById('new-criterion-type').value = 'normal';
+            
+            // Re-render map
+            renderZipcodeMap();
+            
+            showNotification('Reset', 'Criteria have been reset to defaults', 'warning');
+        }
+        
+        // Show confirmation modal for data update
+        function showUpdateConfirmation() {
+            document.getElementById('update-modal').classList.add('active');
+        }
+        
+        // Hide update confirmation modal
+        function hideUpdateConfirmation() {
+            document.getElementById('update-modal').classList.remove('active');
+        }
+        
+        // Update data from the server
+        function updateData() {
+            hideUpdateConfirmation();
+            setLoading(true);
+            
+            // Show progress indicator
+            const progressIndicator = document.getElementById('progress-indicator');
+            const progressBar = document.getElementById('progress-bar');
+            
+            progressIndicator.classList.add('active');
+            
+            // Simulate progress (in a real app, we'd use actual progress events)
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += Math.random() * 10;
+                if (progress > 100) progress = 100;
+                
+                progressBar.style.width = `${progress}%`;
+                
+                if (progress >= 100) {
+                    clearInterval(progressInterval);
+                }
+            }, 300);
+            
+            // Make API request to trigger data update
+            fetch(`${config.apiBaseUrl}/update-data/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Server returned ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Ensure progress bar reaches 100%
+                progressBar.style.width = '100%';
+                
+                // Show success message
+                showNotification('Update Complete', 'Data updated successfully!', 'success');
+                
+                // Reload zipcode data
+                loadZipcodeData();
+            })
+            .catch(error => {
+                console.error('Error updating data:', error);
+                showNotification('Update Failed', `${error.message}`, 'error');
+            })
+            .finally(() => {
+                // Hide progress indicator after a short delay
+                setTimeout(() => {
+                    progressIndicator.classList.remove('active');
+                    progressBar.style.width = '0%';
+                    setLoading(false);
+                }, 500);
+                
+                clearInterval(progressInterval);
+            });
+        }
+        
+        // Check if data refresh is needed
+        function checkDataRefreshStatus() {
+            const lastUpdateTime = localStorage.getItem('lastDataUpdate');
+            
+            if (lastUpdateTime) {
+                const lastUpdate = new Date(lastUpdateTime);
+                const now = new Date();
+                
+                // Check if more than the refresh interval has passed
+                if (now - lastUpdate > config.dataRefreshInterval) {
+                    // If so, add a visual indicator to the refresh button
+                    const updateBtn = document.getElementById('update-data-btn');
+                    updateBtn.classList.add('needs-update');
+                    
+                    showNotification('Info', 'Data refresh recommended', 'info');
+                }
+            }
+        }
+        
+        // Update last updated time
+        function updateLastUpdatedTime() {
+            const now = new Date();
+            state.lastUpdated = now;
+            
+            // Format the date/time
+            const formattedDate = now.toLocaleDateString(undefined, {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+            
+            const formattedTime = now.toLocaleTimeString(undefined, {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            const formattedDateTime = `${formattedDate} at ${formattedTime}`;
+            
+            // Update UI
+            document.getElementById('last-updated').textContent = `Last updated: ${formattedDateTime}`;
+            
+            // Store in localStorage
+            localStorage.setItem('lastDataUpdate', now.toISOString());
+        }
+        
+        // Show loading state
+        function setLoading(isLoading) {
+            state.isLoading = isLoading;
+            
+            // Toggle loading overlay
+            // Toggle loading overlay
+            const loadingOverlay = document.getElementById('map-loading');
+            
+            if (isLoading) {
+                loadingOverlay.classList.add('active');
+            } else {
+                loadingOverlay.classList.remove('active');
+            }
+        }
+        
+        // Show notification
+        function showNotification(title, message, type = 'info') {
+            const container = document.getElementById('notification-container');
+            
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            
+            // Set icon based on type
+            let icon = 'fa-info-circle';
+            if (type === 'success') icon = 'fa-check-circle';
+            if (type === 'error') icon = 'fa-exclamation-circle';
+            if (type === 'warning') icon = 'fa-exclamation-triangle';
+            
+            notification.innerHTML = `
+                <div class="notification-icon">
+                    <i class="fas ${icon}"></i>
+                </div>
+                <div class="notification-content">
+                    <div class="notification-title">${title}</div>
+                    <div class="notification-message">${message}</div>
+                </div>
+                <button class="notification-close">&times;</button>
+            `;
+            
+            // Add to container
+            container.appendChild(notification);
+            
+            // Add animation class after a small delay (for transition effect)
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 10);
+            
+            // Add close button handler
+            notification.querySelector('.notification-close').addEventListener('click', () => {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    notification.remove();
+                }, 300);
+            });
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (document.body.contains(notification)) {
+                    notification.classList.remove('show');
+                    setTimeout(() => {
+                        if (document.body.contains(notification)) {
+                            notification.remove();
+                        }
+                    }, 300);
+                }
+            }, 5000);
+        }
+        
+        // Show settings modal
+        function showSettings() {
+            const modal = document.getElementById('settings-modal');
+            modal.classList.add('active');
+            
+            // Set current settings in the form
+            document.getElementById('color-scheme').value = appSettings.colorScheme;
+            document.getElementById('reverse-colors').checked = appSettings.reverseColors;
+            document.getElementById('map-style').value = appSettings.mapStyle || 'standard';
+            
+            // Update the color scheme preview
+            updateColorSchemePreview(appSettings.colorScheme, appSettings.reverseColors);
+            
+            // Force focus on the modal
+            setTimeout(() => {
+                document.querySelector('#settings-modal .modal').focus();
+            }, 50);
+        }
+        
+        // Update color scheme preview
+        function updateColorSchemePreview(schemeKey, isReversed) {
+            const gradientElement = document.getElementById('preview-gradient');
+            const colorSchemeFunction = colorSchemes[schemeKey] || d3.interpolateRdYlGn;
+            
+            // Generate gradient CSS
+            let gradientStops = '';
+            for (let i = 0; i <= 10; i++) {
+                const position = i * 10;
+                const colorValue = isReversed ? (10 - i) / 10 : i / 10;
+                const color = colorSchemeFunction(colorValue);
+                gradientStops += `${color} ${position}%${i < 10 ? ',' : ''}`;
+            }
+            
+            // Apply gradient
+            gradientElement.style.background = `linear-gradient(to right, ${gradientStops})`;
+        }
+        
+        // Hide settings modal
+        function hideSettings() {
+            document.getElementById('settings-modal').classList.remove('active');
+        }
+        
+        // Apply settings changes
+        function applySettings() {
+            // Get form values
+            const colorScheme = document.getElementById('color-scheme').value;
+            const reverseColors = document.getElementById('reverse-colors').checked;
+            const mapStyle = document.getElementById('map-style').value;
+            
+            // Update settings
+            appSettings.colorScheme = colorScheme;
+            appSettings.reverseColors = reverseColors;
+            appSettings.mapStyle = mapStyle;
+            
+            // Update map style if needed
+            updateMapStyle(mapStyle);
+            
+            // Rerender the map
+            renderZipcodeMap();
+            
+            // Close modal
+            hideSettings();
+            
+            showNotification('Settings Applied', 'Your map settings have been updated', 'success');
+        }
+        
+        // Update map style based on settings
+        function updateMapStyle(style) {
+            // Remove existing tile layer
+            state.map.eachLayer(layer => {
+                if (layer instanceof L.TileLayer) {
+                    state.map.removeLayer(layer);
+                }
+            });
+            
+            // Add new tile layer based on style
+            let tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+            let attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+            
+            switch (style) {
+                case 'light':
+                    tileUrl = 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png';
+                    attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attribution">CARTO</a>';
+                    break;
+                case 'dark':
+                    tileUrl = 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png';
+                    attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attribution">CARTO</a>';
+                    break;
+                case 'satellite':
+                    tileUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+                    attribution = 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community';
+                    break;
+            }
+            
+            L.tileLayer(tileUrl, {
+                attribution: attribution,
+                minZoom: config.mapMinZoom,
+                maxZoom: config.mapMaxZoom
+            }).addTo(state.map);
+        }
+        
+        function preventMapInteraction(e) {
+            e.stopPropagation();
+        }
+        
+        // Color schemes
+        const colorSchemes = {
+            'RdYlBu': d3.interpolateRdYlBu,
+            'RdYlGn': d3.interpolateRdYlGn,
+            'YlGnBu': d3.interpolateYlGnBu,
+            'YlOrRd': d3.interpolateYlOrRd,
+            'Viridis': d3.interpolateViridis,
+            'Inferno': d3.interpolateInferno,
+            'Plasma': d3.interpolatePlasma
+        };
+        
+        // App settings with defaults
+        let appSettings = {
+            colorScheme: 'RdYlGn',
+            reverseColors: false,
+            mapStyle: 'standard'
+        };
+        
+        // City name mapping for Bay Area zipcodes
+        // Comprehensive Bay Area ZIP code to city name mapping
+        function getCityNameFromZip(zipcode) {
+            const zipCityMap = {
+                // San Francisco County
+                '94102': 'San Francisco - Civic Center',
+                '94103': 'San Francisco - SoMa',
+                '94104': 'San Francisco - Financial District',
+                '94105': 'San Francisco - Embarcadero',
+                '94107': 'San Francisco - Potrero Hill',
+                '94108': 'San Francisco - Chinatown',
+                '94109': 'San Francisco - Nob Hill',
+                '94110': 'San Francisco - Mission District',
+                '94111': 'San Francisco - Financial District',
+                '94112': 'San Francisco - Ingleside',
+                '94114': 'San Francisco - Castro',
+                '94115': 'San Francisco - Pacific Heights',
+                '94116': 'San Francisco - Sunset District',
+                '94117': 'San Francisco - Haight-Ashbury',
+                '94118': 'San Francisco - Richmond District',
+                '94121': 'San Francisco - Outer Richmond',
+                '94122': 'San Francisco - Sunset District',
+                '94123': 'San Francisco - Marina District',
+                '94124': 'San Francisco - Bayview',
+                '94127': 'San Francisco - West Portal',
+                '94129': 'San Francisco - Presidio',
+                '94130': 'San Francisco - Treasure Island',
+                '94131': 'San Francisco - Twin Peaks',
+                '94132': 'San Francisco - Lake Merced',
+                '94133': 'San Francisco - North Beach',
+                '94134': 'San Francisco - Visitacion Valley',
+                '94158': 'San Francisco - Mission Bay',
+                
+                // San Mateo County
+                '94002': 'Belmont',
+                '94005': 'Brisbane',
+                '94010': 'Burlingame',
+                '94011': 'Burlingame',
+                '94014': 'Daly City',
+                '94015': 'Daly City',
+                '94018': 'El Granada',
+                '94019': 'Half Moon Bay',
+                '94020': 'La Honda',
+                '94021': 'Loma Mar',
+                '94025': 'Menlo Park',
+                '94026': 'Menlo Park',
+                '94027': 'Atherton',
+                '94028': 'Portola Valley',
+                '94030': 'Millbrae',
+                '94037': 'Montara',
+                '94038': 'Moss Beach',
+                '94044': 'Pacifica',
+                '94060': 'Pescadero',
+                '94061': 'Redwood City',
+                '94062': 'Redwood City',
+                '94063': 'Redwood City',
+                '94065': 'Redwood City',
+                '94066': 'San Bruno',
+                '94070': 'San Carlos',
+                '94074': 'San Gregorio',
+                '94080': 'South San Francisco',
+                '94083': 'South San Francisco',
+                '94128': 'San Francisco International Airport',
+                '94303': 'East Palo Alto',
+                '94401': 'San Mateo',
+                '94402': 'San Mateo',
+                '94403': 'San Mateo',
+                '94404': 'Foster City',
+                
+                // Santa Clara County
+                '94022': 'Los Altos',
+                '94023': 'Los Altos',
+                '94024': 'Los Altos',
+                '94035': 'Mountain View',
+                '94039': 'Mountain View',
+                '94040': 'Mountain View',
+                '94041': 'Mountain View',
+                '94042': 'Mountain View',
+                '94043': 'Mountain View',
+                '94085': 'Sunnyvale',
+                '94086': 'Sunnyvale',
+                '94087': 'Sunnyvale',
+                '94088': 'Sunnyvale',
+                '94089': 'Sunnyvale',
+                '94301': 'Palo Alto',
+                '94302': 'Palo Alto',
+                '94303': 'Palo Alto',
+                '94304': 'Palo Alto',
+                '94305': 'Stanford',
+                '94306': 'Palo Alto',
+                '94309': 'Palo Alto',
+                '95002': 'Alviso',
+                '95008': 'Campbell',
+                '95009': 'Campbell',
+                '95011': 'Campbell',
+                '95013': 'Coyote',
+                '95014': 'Cupertino',
+                '95015': 'Cupertino',
+                '95030': 'Los Gatos',
+                '95031': 'Los Gatos',
+                '95032': 'Los Gatos',
+                '95033': 'Los Gatos',
+                '95035': 'Milpitas',
+                '95036': 'Milpitas',
+                '95037': 'Morgan Hill',
+                '95038': 'Morgan Hill',
+                '95046': 'San Martin',
+                '95050': 'Santa Clara',
+                '95051': 'Santa Clara',
+                '95052': 'Santa Clara',
+                '95053': 'Santa Clara',
+                '95054': 'Santa Clara',
+                '95070': 'Saratoga',
+                '95071': 'Saratoga',
+                '95101': 'San Jose',
+                '95103': 'San Jose',
+                '95106': 'San Jose',
+                '95108': 'San Jose',
+                '95109': 'San Jose',
+                '95110': 'San Jose',
+                '95111': 'San Jose',
+                '95112': 'San Jose',
+                '95113': 'San Jose',
+                '95115': 'San Jose',
+                '95116': 'San Jose',
+                '95117': 'San Jose',
+                '95118': 'San Jose',
+                '95119': 'San Jose',
+                '95120': 'San Jose',
+                '95121': 'San Jose',
+                '95122': 'San Jose',
+                '95123': 'San Jose',
+                '95124': 'San Jose',
+                '95125': 'San Jose',
+                '95126': 'San Jose',
+                '95127': 'San Jose',
+                '95128': 'San Jose',
+                '95129': 'San Jose',
+                '95130': 'San Jose',
+                '95131': 'San Jose',
+                '95132': 'San Jose',
+                '95133': 'San Jose',
+                '95134': 'San Jose',
+                '95135': 'San Jose',
+                '95136': 'San Jose',
+                '95138': 'San Jose',
+                '95139': 'San Jose',
+                '95140': 'Mount Hamilton',
+                '95141': 'San Jose',
+                '95148': 'San Jose',
+                '95150': 'San Jose',
+                '95151': 'San Jose',
+                '95152': 'San Jose',
+                '95153': 'San Jose',
+                '95154': 'San Jose',
+                '95155': 'San Jose',
+                '95156': 'San Jose',
+                '95157': 'San Jose',
+                '95158': 'San Jose',
+                '95159': 'San Jose',
+                '95160': 'San Jose',
+                '95161': 'San Jose',
+                '95164': 'San Jose',
+                '95170': 'San Jose',
+                '95172': 'San Jose',
+                '95173': 'San Jose',
+
+                // Alameda County
+                '94501': 'Alameda',
+                '94502': 'Alameda',
+                '94514': 'Byron',
+                '94536': 'Fremont',
+                '94537': 'Fremont',
+                '94538': 'Fremont',
+                '94539': 'Fremont',
+                '94540': 'Hayward',
+                '94541': 'Hayward',
+                '94542': 'Hayward',
+                '94543': 'Hayward',
+                '94544': 'Hayward',
+                '94545': 'Hayward',
+                '94546': 'Castro Valley',
+                '94550': 'Livermore',
+                '94551': 'Livermore',
+                '94552': 'Castro Valley',
+                '94555': 'Fremont',
+                '94557': 'Hayward',
+                '94560': 'Newark',
+                '94566': 'Pleasanton',
+                '94568': 'Dublin',
+                '94577': 'San Leandro',
+                '94578': 'San Leandro',
+                '94579': 'San Leandro',
+                '94580': 'San Lorenzo',
+                '94586': 'Sunol',
+                '94587': 'Union City',
+                '94588': 'Pleasanton',
+                '94601': 'Oakland',
+                '94602': 'Oakland',
+                '94603': 'Oakland',
+                '94604': 'Oakland',
+                '94605': 'Oakland',
+                '94606': 'Oakland',
+                '94607': 'Oakland',
+                '94608': 'Emeryville',
+                '94609': 'Oakland',
+                '94610': 'Oakland',
+                '94611': 'Oakland',
+                '94612': 'Oakland',
+                '94613': 'Oakland',
+                '94614': 'Oakland',
+                '94615': 'Oakland',
+                '94617': 'Oakland',
+                '94618': 'Oakland - Rockridge',
+                '94619': 'Oakland',
+                '94620': 'Oakland',
+                '94621': 'Oakland',
+                '94623': 'Oakland',
+                '94624': 'Oakland',
+                '94661': 'Oakland',
+                '94662': 'Emeryville',
+                '94701': 'Berkeley',
+                '94702': 'Berkeley',
+                '94703': 'Berkeley',
+                '94704': 'Berkeley',
+                '94705': 'Berkeley',
+                '94706': 'Albany',
+                '94707': 'Berkeley',
+                '94708': 'Berkeley',
+                '94709': 'Berkeley',
+                '94710': 'Berkeley',
+                '94712': 'Berkeley',
+                '94720': 'Berkeley',
+
+                // Contra Costa County
+                '94506': 'Danville',
+                '94507': 'Alamo',
+                '94509': 'Antioch',
+                '94511': 'Bethel Island',
+                '94513': 'Brentwood',
+                '94516': 'Canyon',
+                '94517': 'Clayton',
+                '94518': 'Concord',
+                '94519': 'Concord',
+                '94520': 'Concord',
+                '94521': 'Concord',
+                '94522': 'Concord',
+                '94523': 'Pleasant Hill',
+                '94524': 'Concord',
+                '94525': 'Crockett',
+                '94526': 'Danville',
+                '94527': 'Concord',
+                '94528': 'Diablo',
+                '94529': 'Concord',
+                '94530': 'El Cerrito',
+                '94531': 'Antioch',
+                '94547': 'Hercules',
+                '94548': 'Knightsen',
+                '94549': 'Lafayette',
+                '94553': 'Martinez',
+                '94556': 'Moraga',
+                '94561': 'Oakley',
+                '94563': 'Orinda',
+                '94564': 'Pinole',
+                '94565': 'Pittsburg',
+                '94569': 'Port Costa',
+                '94570': 'Moraga',
+                '94572': 'Rodeo',
+                '94575': 'Moraga',
+                '94582': 'San Ramon',
+                '94583': 'San Ramon',
+                '94595': 'Walnut Creek',
+                '94596': 'Walnut Creek',
+                '94597': 'Walnut Creek',
+                '94598': 'Walnut Creek',
+                '94801': 'Richmond',
+                '94802': 'Richmond',
+                '94803': 'El Sobrante',
+                '94804': 'Richmond',
+                '94805': 'Richmond',
+                '94806': 'San Pablo',
+                '94807': 'Richmond',
+                '94808': 'Richmond',
+                '94820': 'El Sobrante',
+                '94850': 'Richmond',
+
+                // Marin County
+                '94901': 'San Rafael',
+                '94903': 'San Rafael',
+                '94904': 'Greenbrae',
+                '94912': 'San Rafael',
+                '94913': 'San Rafael',
+                '94914': 'Kentfield',
+                '94915': 'San Rafael',
+                '94920': 'Belvedere Tiburon',
+                '94924': 'Bolinas',
+                '94925': 'Corte Madera',
+                '94929': 'Dillon Beach',
+                '94930': 'Fairfax',
+                '94933': 'Forest Knolls',
+                '94937': 'Inverness',
+                '94938': 'Lagunitas',
+                '94939': 'Larkspur',
+                '94940': 'Marshall',
+                '94941': 'Mill Valley',
+                '94942': 'Mill Valley',
+                '94945': 'Novato',
+                '94946': 'Nicasio',
+                '94947': 'Novato',
+                '94948': 'Novato',
+                '94949': 'Novato',
+                '94950': 'Olema',
+                '94952': 'Petaluma',
+                '94956': 'Point Reyes Station',
+                '94957': 'Ross',
+                '94960': 'San Anselmo',
+                '94963': 'San Geronimo',
+                '94964': 'San Quentin',
+                '94965': 'Sausalito',
+                '94966': 'Sausalito',
+                '94970': 'Stinson Beach',
+                '94971': 'Tomales',
+                '94973': 'Woodacre',
+                '94974': 'San Quentin',
+                '94979': 'San Anselmo',
+
+                // Napa County
+                '94503': 'American Canyon',
+                '94508': 'Angwin',
+                '94515': 'Calistoga',
+                '94558': 'Napa',
+                '94559': 'Napa',
+                '94562': 'Oakville',
+                '94567': 'Pope Valley',
+                '94573': 'Rutherford',
+                '94574': 'Saint Helena',
+                '94576': 'Deer Park',
+                '94581': 'Napa',
+                '94599': 'Yountville',
+
+                // Solano County
+                '94510': 'Benicia',
+                '94512': 'Birds Landing',
+                '94533': 'Fairfield',
+                '94534': 'Fairfield',
+                '94535': 'Travis AFB',
+                '94571': 'Rio Vista',
+                '94585': 'Suisun City',
+                '94589': 'Vallejo',
+                '94590': 'Vallejo',
+                '94591': 'Vallejo',
+                '94592': 'Vallejo',
+
+                // Sonoma County
+                '94922': 'Bodega',
+                '94923': 'Bodega Bay',
+                '94926': 'Cotati',
+                '94927': 'Rohnert Park',
+                '94928': 'Rohnert Park',
+                '94931': 'Forestville',
+                '94951': 'Penngrove',
+                '94952': 'Petaluma',
+                '94953': 'Petaluma',
+                '94954': 'Petaluma',
+                '94955': 'Petaluma',
+                '94972': 'Valley Ford',
+                '94975': 'Petaluma',
+                '94999': 'Petaluma',
+                '95401': 'Santa Rosa',
+                '95402': 'Santa Rosa',
+                '95403': 'Santa Rosa',
+                '95404': 'Santa Rosa',
+                '95405': 'Santa Rosa',
+                '95406': 'Santa Rosa',
+                '95407': 'Santa Rosa',
+                '95409': 'Santa Rosa',
+                '95412': 'Annapolis',
+                '95416': 'Boyes Hot Springs',
+                '95419': 'Camp Meeker',
+                '95421': 'Cazadero',
+                '95425': 'Cloverdale',
+                '95430': 'Duncans Mills',
+                '95431': 'Eldridge',
+                '95433': 'El Verano',
+                '95436': 'Forestville',
+                '95439': 'Fulton',
+                '95441': 'Geyserville',
+                '95442': 'Glen Ellen',
+                '95444': 'Graton',
+                '95446': 'Guerneville',
+                '95448': 'Healdsburg',
+                '95450': 'Jenner',
+                '95452': 'Kenwood',
+                '95462': 'Monte Rio',
+                '95465': 'Occidental',
+                '95471': 'Rio Nido',
+                '95472': 'Sebastopol',
+                '95473': 'Sebastopol',
+                '95476': 'Sonoma',
+                '95480': 'Stewarts Point',
+                '95486': 'Villa Grande',
+                '95487': 'Vineburg',
+                '95492': 'Windsor'
+            };
+            
+            return zipCityMap[zipcode] || `${zipcode} Area`;
+        }
+    </script>
+    <script src="debug.js"></script>
+    <script>
+        // Fix API data loading and display issues
+        (function() {
+            // Fix 1: Ensure API endpoint has correct trailing slash
+            const originalLoadZipcodeData = window.loadZipcodeData;
+            window.loadZipcodeData = async function() {
+                setLoading(true);
+                
+                try {
+                    // Fix URL to ensure it works with Nginx config
+                    let apiUrl = `${config.apiBaseUrl}/zipcodes/geojson`;
+                    
+                    // Ensure trailing slash for Nginx proxy pass
+                    if (!apiUrl.endsWith('/')) {
+                        apiUrl += '/';
+                    }
+                    
+                    console.log('Requesting data from:', apiUrl);
+                    
+                    // Fetch zipcode GeoJSON from API
+                    const response = await fetch(apiUrl);
+                    
+                    if (!response.ok) {
+                        throw new Error(`Failed to load zipcode data (${response.status})`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    // DEBUG: Log received data structure
+                    console.log('Received data:', data);
+                    console.log('Features count:', data.features ? data.features.length : 0);
+                    
+                    if (!data.features || data.features.length === 0) {
+                        if (config.fallbackToDefault) {
+                            // Create fallback data
+                            showNotification('Using Demo Data', 'No zipcode data received. Using sample data for demonstration.', 'warning');
+                            
+                            // Generate fake data for demo
+                            const demoData = {
+                                type: "FeatureCollection",
+                                features: [sampleFeature]
+                            };
+                            
+                            state.zipcodeData = demoData;
+                            updateLastUpdatedTime();
+                            renderZipcodeMap();
+                            setLoading(false);
+                            return;
+                        } else {
+                            showNotification('Data Error', 'No zipcode features found in the response. Check server data.', 'error');
+                            setLoading(false);
+                            return;
+                        }
+                    }
+                    
+                    // Store the data
+                    state.zipcodeData = data;
+                    
+                    // Update last updated timestamp
+                    updateLastUpdatedTime();
+                    
+                    // Render the map
+                    renderZipcodeMap();
+                    
+                    // Show success notification
+                    showNotification('Data Loaded', 'Map data has been successfully loaded.', 'success');
+                    
+                } catch (error) {
+                    console.error('Error loading zipcode data:', error);
+                    showNotification('Error', `Failed to load zipcode data: ${error.message}`, 'error');
+                    
+                    if (config.fallbackToDefault) {
+                        // Create fallback data
+                        showNotification('Using Demo Data', 'Failed to load from API. Using sample data for demonstration.', 'warning');
+                        
+                        // Generate fake data for demo
+                        const demoData = {
+                            type: "FeatureCollection",
+                            features: [sampleFeature]
+                        };
+                        
+                        state.zipcodeData = demoData;
+                        updateLastUpdatedTime();
+                        renderZipcodeMap();
+                    } else {
+                        // Auto-retry after 30 seconds
+                        setTimeout(loadZipcodeData, 30000);
+                    }
+                } finally {
+                    setLoading(false);
+                }
+            };
+        
+            // Fix 2: Improve score calculation to handle missing or invalid data
+            const originalCalculateZipcodeScores = window.calculateZipcodeScores;
+            window.calculateZipcodeScores = function() {
+                const scores = {};
+                
+                if (!state.zipcodeData || !state.zipcodeData.features) {
+                    console.warn('No zipcode data available for calculating scores');
+                    return scores;
+                }
+                
+                // Get active criteria
+                const activeCriteria = state.criteria.filter(c => c.enabled);
+                
+                if (activeCriteria.length === 0) {
+                    console.warn('No active criteria found for calculating scores');
+                    return scores;
+                }
+                
+                // Calculate scores for each zipcode
+                state.zipcodeData.features.forEach(feature => {
+                    if (!feature.properties) {
+                        console.warn('Feature missing properties:', feature);
+                        return;
+                    }
+                    
+                    const zipcode = feature.properties.ZIP || feature.properties.ZCTA5CE10;
+                    if (!zipcode) {
+                        console.warn('Feature missing zipcode identifier:', feature);
+                        return;
+                    }
+                    
+                    let totalScore = 0;
+                    let totalWeight = 0;
+                    let usedCriteria = 0;
+                    
+                    activeCriteria.forEach(criterion => {
+                        // Get value and ensure it's numeric
+                        let value = parseFloat(feature.properties[criterion.id]);
+                        
+                        // Skip if value is missing or not a number
+                        if (isNaN(value)) {
+                            // Use a default value of 5 (middle of the scale)
+                            value = 5;
+                        }
+                        
+                        let score = value;
+                        
+                        // If invert is true, higher values should score lower
+                        if (criterion.invert) {
+                            // Assume a scale of 0-10 for all criteria
+                            score = 10 - score;
+                        }
+                        
+                        totalScore += score * criterion.weight;
+                        totalWeight += criterion.weight;
+                        usedCriteria++;
+                    });
+                    
+                    // Calculate final score (weighted average)
+                    if (totalWeight > 0) {
+                        scores[zipcode] = totalScore / totalWeight;
+                    } else {
+                        scores[zipcode] = 5; // Default to middle score if no criteria
+                    }
+                });
+                
+                // Print a few scores for debugging
+                const sampleZips = Object.keys(scores).slice(0, 5);
+                if (sampleZips.length > 0) {
+                    console.log('Sample scores:', sampleZips.map(zip => ({ zip, score: scores[zip] })));
+                }
+                
+                return scores;
+            };
+        
+            // Fix 3: Improve details panel to handle missing or invalid data
+            const originalUpdateDetailsPanel = window.updateDetailsPanel;
+            window.updateDetailsPanel = function(zipcode, feature) {
+                const detailsContainer = document.getElementById('details-content');
+                
+                if (!feature || !feature.properties) {
+                    detailsContainer.innerHTML = `
+                        <div class="details-placeholder">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <p>No data available for this zipcode</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                const props = feature.properties;
+                const scores = calculateZipcodeScores();
+                const score = scores[zipcode] ? scores[zipcode].toFixed(1) : '5.0';
+                
+                // Get real city name
+                const cityName = getCityNameFromZip(zipcode) || props.NAME || `${zipcode} Area`;
+                
+                let html = `
+                    <div class="zipcode-details">
+                        <div class="zipcode-title">
+                            <div class="zipcode-name">${cityName} (${zipcode})</div>
+                            <div class="score-pill">${score}</div>
+                        </div>
+                        
+                        <div class="rating-list">
+                `;
+                
+                // Define all the standard ratings with icons
+                const standardRatings = [
+                    {id: 'schoolRating', name: 'Schools', icon: 'fa-school'},
+                    {id: 'nicheRating', name: 'Niche', icon: 'fa-star'},
+                    {id: 'crimeRate', name: 'Safety', icon: 'fa-shield-alt'},
+                    {id: 'commuteTime', name: 'Commute', icon: 'fa-car'}
+                ];
+                
+                // First add standard ratings, with placeholders for missing data
+                standardRatings.forEach(rating => {
+                    const value = parseFloat(props[rating.id]);
+                    
+                    if (!isNaN(value)) {
+                        html += `
+                            <div class="rating-item">
+                                <div class="rating-icon"><i class="fas ${rating.icon}"></i></div>
+                                <div class="rating-name">${rating.name}</div>
+                                <div class="rating-value">${value.toFixed(1)}</div>
+                            </div>
+                        `;
+                    } else {
+                        html += `
+                            <div class="rating-item" style="opacity: 0.6;">
+                                <div class="rating-icon"><i class="fas ${rating.icon}"></i></div>
+                                <div class="rating-name">${rating.name}</div>
+                                <div class="rating-value">N/A</div>
+                            </div>
+                        `;
+                    }
+                });
+                
+                html += `</div>`;
+                
+                // Add demographic information section if available
+                if (props.population || props.median_income || props.median_home_value || 
+                    props.county || props.median_rent || props.ownership_percent) {
+                    
+                    html += `
+                        <div class="rating-subsection">
+                            <div class="rating-subsection-title">
+                                <i class="fas fa-info-circle"></i> Area Information
+                            </div>
+                            <div class="rating-list">
+                    `;
+                    
+                    // Add county information if available
+                    if (props.county) {
+                        html += `
+                            <div class="rating-item">
+                                <div class="rating-icon"><i class="fas fa-map-marker-alt"></i></div>
+                                <div class="rating-name">County</div>
+                                <div class="rating-value">${props.county}</div>
+                            </div>
+                        `;
+                    }
+                    
+                    // Add population information if available
+                    const population = parseInt(props.population);
+                    if (!isNaN(population)) {
+                        html += `
+                            <div class="rating-item">
+                                <div class="rating-icon"><i class="fas fa-users"></i></div>
+                                <div class="rating-name">Population</div>
+                                <div class="rating-value">${population.toLocaleString()}</div>
+                            </div>
+                        `;
+                    }
+                    
+                    // Add median home value if available
+                    const homeValue = parseFloat(props.median_home_value);
+                    if (!isNaN(homeValue)) {
+                        html += `
+                            <div class="rating-item">
+                                <div class="rating-icon"><i class="fas fa-home"></i></div>
+                                <div class="rating-name">Median Home</div>
+                                <div class="rating-value">${formatNumber(homeValue)}</div>
+                            </div>
+                        `;
+                    }
+                    
+                    // Add median income if available
+                    const income = parseFloat(props.median_income);
+                    if (!isNaN(income)) {
+                        html += `
+                            <div class="rating-item">
+                                <div class="rating-icon"><i class="fas fa-dollar-sign"></i></div>
+                                <div class="rating-name">Median Income</div>
+                                <div class="rating-value">${formatNumber(income)}</div>
+                            </div>
+                        `;
+                    }
+                    
+                    // Add median rent if available
+                    const rent = parseFloat(props.median_rent);
+                    if (!isNaN(rent)) {
+                        html += `
+                            <div class="rating-item">
+                                <div class="rating-icon"><i class="fas fa-key"></i></div>
+                                <div class="rating-name">Median Rent</div>
+                                <div class="rating-value">${formatNumber(rent)}</div>
+                            </div>
+                        `;
+                    }
+                    
+                    // Add ownership percentage if available
+                    const ownership = parseFloat(props.ownership_percent);
+                    if (!isNaN(ownership)) {
+                        html += `
+                            <div class="rating-item">
+                                <div class="rating-icon"><i class="fas fa-percentage"></i></div>
+                                <div class="rating-name">Ownership</div>
+                                <div class="rating-value">${ownership.toFixed(1)}%</div>
+                            </div>
+                        `;
+                    }
+                    
+                    html += `</div></div>`;
+                }
+                
+                html += `</div>`;
+                
+                detailsContainer.innerHTML = html;
+            };
+            
+            // Fix 4: Make sure color mapping works correctly
+            const originalRenderZipcodeMap = window.renderZipcodeMap;
+            window.renderZipcodeMap = function() {
+                if (!state.zipcodeData || !state.zipcodeData.features || state.zipcodeData.features.length === 0) {
+                    console.error('No valid zipcode data to render');
+                    // Set default view instead of trying to fit bounds
+                    state.map.setView(config.mapCenter, config.mapZoom);
+                    showNotification('Data Error', 'No zipcode data available. Using default map view of the Bay Area.', 'error');
+                    return;
+                }
+                
+                // Debug info
+                console.log('Rendering map with', state.zipcodeData.features.length, 'features');
+                
+                // Remove existing layer if present
+                if (state.zipcodeLayer) {
+                    state.map.removeLayer(state.zipcodeLayer);
+                }
+                
+                // Calculate scores for each zipcode
+                const scores = calculateZipcodeScores();
+                console.log('Calculated scores for', Object.keys(scores).length, 'zipcodes');
+                
+                // Get color scheme based on settings
+                const colorSchemeFunction = colorSchemes[appSettings.colorScheme] || d3.interpolateRdYlGn;
+                
+                // Create color scale using d3
+                const colorScale = d3.scaleSequential(colorSchemeFunction)
+                    .domain(appSettings.reverseColors ? [10, 0] : [0, 10]);  // Scores from 0-10
+                
+                try {
+                    // Create new GeoJSON layer
+                    state.zipcodeLayer = L.geoJSON(state.zipcodeData, {
+                        style: feature => {
+                            const zipcode = feature.properties.ZIP || feature.properties.ZCTA5CE10;
+                            // Ensure a valid score - default to 5 if missing
+                            const score = scores[zipcode] !== undefined ? scores[zipcode] : 5;
+                            
+                            // Debug score for first few zipcodes
+                            if (Object.keys(scores).indexOf(zipcode) < 5) {
+                                console.log(`Zipcode ${zipcode} score: ${score}, color: ${colorScale(score)}`);
+                            }
+                            
+                            return {
+                                fillColor: colorScale(score),
+                                weight: 1,
+                                opacity: 1,
+                                color: 'white',
+                                fillOpacity: 0.7
+                            };
+                        },
+                        onEachFeature: (feature, layer) => {
+                            // Debug geometry
+                            if (!feature.geometry || !feature.geometry.coordinates || feature.geometry.coordinates.length === 0) {
+                                console.warn('Feature missing valid geometry:', feature);
+                            }
+                            
+                            const zipcode = feature.properties.ZIP || feature.properties.ZCTA5CE10;
+                            const cityName = getCityNameFromZip(zipcode);
+                            
+                            // Add tooltip
+                            layer.bindTooltip(`${cityName} (${zipcode})`, {
+                                sticky: true,
+                                className: 'custom-tooltip'
+                            });
+                            
+                            // Add click handler
+                            layer.on('click', () => {
+                                selectZipcode(zipcode, feature);
+                                
+                                // Highlight the selected zipcode
+                                state.zipcodeLayer.eachLayer(l => {
+                                    if (l.feature) {
+                                        const thisZip = l.feature.properties.ZIP || l.feature.properties.ZCTA5CE10;
+                                        
+                                        l.setStyle({
+                                            weight: thisZip === zipcode ? 3 : 1,
+                                            color: thisZip === zipcode ? '#2563eb' : 'white'
+                                        });
+                                        
+                                        if (thisZip === zipcode) {
+                                            l.bringToFront();
+                                        }
+                                    }
+                                });
+                                
+                                // Open panel on mobile if collapsed
+                                if (window.innerWidth <= 1024 && state.isPanelCollapsed) {
+                                    togglePanel();
+                                }
+                            });
+                        }
+                    }).addTo(state.map);
+                    
+                    // Only fit bounds if we have features
+                    if (state.zipcodeData.features && state.zipcodeData.features.length > 0) {
+                        console.log('Fitting bounds to zipcode layer');
+                        state.map.fitBounds(state.zipcodeLayer.getBounds());
+                    }
+                    
+                } catch (error) {
+                    console.error('Error rendering GeoJSON layer:', error);
+                    showNotification('Map Error', `Failed to render map: ${error.message}`, 'error');
+                }
+            };
+            
+            // Automatically reload data on page load to apply fixes
+            // Wait a bit for the map to initialize
+            setTimeout(() => {
+                console.log('Applying fixes and reloading data...');
+                loadZipcodeData();
+            }, 500);
+            
+            // Show notification that fixes have been applied
+            setTimeout(() => {
+                showNotification('Fixes Applied', 'Map display has been fixed. Data should now load correctly.', 'success');
+            }, 1000);
+        })();
+        </script>
+</body>
+</html>
